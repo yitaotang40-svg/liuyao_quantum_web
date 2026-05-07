@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IBM Quantum 六爻起卦</title>
+    <link rel="stylesheet" href="./styles.css?v=8" />
+  </head>
+  <body>
+    <div class="quantum-scene" aria-hidden="true"></div>
+    <main class="shell">
+      <section class="masthead">
+        <div>
+          <p class="eyebrow">IBM Quantum</p>
+          <h1>量子起卦</h1>
+        </div>
+        <div class="seal" aria-hidden="true">六</div>
+      </section>
+
+      <section class="workspace">
+        <aside class="control-panel">
+          <div class="panel-heading">
+            <span class="live-dot" id="liveDot"></span>
+            <span id="panelTitle">就绪</span>
+          </div>
+
+          <label class="field">
+            <span>量子机</span>
+            <select id="backendSelect">
+              <option value="">自动选择</option>
+              <option value="ibm_kingston">ibm_kingston</option>
+              <option value="ibm_marrakesh">ibm_marrakesh</option>
+              <option value="ibm_fez">ibm_fez</option>
+            </select>
+          </label>
+
+          <button id="castButton" type="button">
+            <span class="button-mark" aria-hidden="true"></span>
+            <span>一键起卦</span>
+          </button>
+
+          <dl class="status-list">
+            <div>
+              <dt>状态</dt>
+              <dd id="statusText">待起卦</dd>
+            </div>
+            <div>
+              <dt>量子机</dt>
+              <dd id="backendText">-</dd>
+            </div>
+            <div>
+              <dt>Job ID</dt>
+              <dd id="jobText">-</dd>
+            </div>
+          </dl>
+        </aside>
+
+        <section class="result-panel" aria-live="polite">
+          <div class="quantum-lines" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="result-title">
+            <span>自下而上六爻是：</span>
+          </div>
+          <ul id="yaoList" class="yao-list">
+            <li class="empty">等待起卦结果</li>
+          </ul>
+          <div id="waitHint" class="wait-hint" hidden>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </section>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden>请等待当前这一卦完成</div>
+    <div id="confirmModal" class="confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+      <div class="confirm-dialog">
+        <p class="confirm-kicker">IBM Quantum</p>
+        <h2 id="confirmTitle">确定交给量子机？</h2>
+        <p class="confirm-copy">确认后会提交一次真实 IBM Quantum 作业，本次等待期间只能起这一卦。</p>
+        <div class="confirm-actions">
+          <button id="confirmCancel" class="ghost-button" type="button" data-confirm-action="cancel">先取消</button>
+          <button id="confirmSubmit" class="solid-button" type="button" data-confirm-action="submit" onclick="window.__submitLiuyaoFromModal && window.__submitLiuyaoFromModal(event)">确认起卦</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js?v=7"></script>
+  </body>
+</html>

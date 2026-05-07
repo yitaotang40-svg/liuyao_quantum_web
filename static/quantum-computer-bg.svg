@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="coldGlow" cx="50%" cy="18%" r="60%">
+      <stop offset="0%" stop-color="#e9fff8" stop-opacity="0.82"/>
+      <stop offset="35%" stop-color="#8fded1" stop-opacity="0.42"/>
+      <stop offset="78%" stop-color="#10211f" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#07100e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" x2="1">
+      <stop offset="0%" stop-color="#edf1ea" stop-opacity="0.88"/>
+      <stop offset="45%" stop-color="#9ea9a1" stop-opacity="0.62"/>
+      <stop offset="100%" stop-color="#f9f3df" stop-opacity="0.8"/>
+    </linearGradient>
+    <linearGradient id="copper" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fff0a8"/>
+      <stop offset="42%" stop-color="#bd8740"/>
+      <stop offset="100%" stop-color="#70502f"/>
+    </linearGradient>
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+    <filter id="wireShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="10" flood-color="#03100d" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#07100e"/>
+  <rect width="1600" height="1000" fill="url(#coldGlow)"/>
+
+  <g opacity="0.18">
+    <path d="M0 178H1600M0 322H1600M0 466H1600M0 610H1600M0 754H1600" stroke="#dff8f1" stroke-width="1"/>
+    <path d="M150 0V1000M330 0V1000M510 0V1000M690 0V1000M870 0V1000M1050 0V1000M1230 0V1000M1410 0V1000" stroke="#dff8f1" stroke-width="1"/>
+  </g>
+
+  <g transform="translate(520 20)" filter="url(#wireShadow)">
+    <ellipse cx="300" cy="90" rx="330" ry="64" fill="#f4f5eb" opacity="0.78"/>
+    <ellipse cx="300" cy="92" rx="250" ry="42" fill="#5f6c66" opacity="0.56"/>
+    <rect x="18" y="88" width="564" height="44" rx="22" fill="url(#metal)" opacity="0.88"/>
+    <ellipse cx="300" cy="132" rx="282" ry="42" fill="#dfe6df" opacity="0.72"/>
+
+    <g opacity="0.92">
+      <path d="M160 134C156 214 154 280 174 348C196 421 241 469 242 548" fill="none" stroke="url(#copper)" stroke-width="10" stroke-linecap="round"/>
+      <path d="M225 132C218 233 219 288 251 359C283 430 303 493 280 590" fill="none" stroke="url(#copper)" stroke-width="8" stroke-linecap="round"/>
+      <path d="M302 132C302 222 305 300 301 385C297 458 306 527 330 620" fill="none" stroke="url(#copper)" stroke-width="11" stroke-linecap="round"/>
+      <path d="M382 132C391 218 398 279 376 343C353 411 348 481 392 566" fill="none" stroke="url(#copper)" stroke-width="8" stroke-linecap="round"/>
+      <path d="M455 134C462 239 454 298 424 372C393 449 415 504 488 604" fill="none" stroke="url(#copper)" stroke-width="10" stroke-linecap="round"/>
+    </g>
+
+    <g opacity="0.86">
+      <ellipse cx="300" cy="264" rx="205" ry="42" fill="url(#metal)"/>
+      <ellipse cx="300" cy="270" rx="164" ry="25" fill="#465651" opacity="0.7"/>
+      <ellipse cx="300" cy="400" rx="170" ry="34" fill="url(#metal)"/>
+      <ellipse cx="300" cy="405" rx="130" ry="19" fill="#394943" opacity="0.72"/>
+      <ellipse cx="300" cy="532" rx="118" ry="28" fill="url(#metal)"/>
+      <ellipse cx="300" cy="536" rx="85" ry="15" fill="#31413d" opacity="0.75"/>
+      <rect x="222" y="620" width="156" height="170" rx="42" fill="url(#metal)" opacity="0.85"/>
+      <ellipse cx="300" cy="790" rx="78" ry="22" fill="#d6ddd3" opacity="0.7"/>
+    </g>
+
+    <g fill="#bff7eb" opacity="0.7" filter="url(#softBlur)">
+      <circle cx="160" cy="350" r="10"/>
+      <circle cx="301" cy="392" r="12"/>
+      <circle cx="454" cy="362" r="9"/>
+      <circle cx="326" cy="612" r="14"/>
+      <circle cx="242" cy="546" r="10"/>
+    </g>
+  </g>
+
+  <g opacity="0.18">
+    <path d="M80 860C250 780 320 800 440 690C590 552 760 710 940 566C1124 418 1260 528 1500 392" fill="none" stroke="#bff7eb" stroke-width="2"/>
+    <path d="M-20 910C156 826 260 860 386 746C560 590 720 746 904 618C1088 490 1240 624 1620 450" fill="none" stroke="#e7c678" stroke-width="2"/>
+  </g>
+
+  <rect width="1600" height="1000" fill="#06100e" opacity="0.25"/>
+</svg>
