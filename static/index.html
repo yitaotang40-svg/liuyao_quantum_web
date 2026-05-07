@@ -4,22 +4,54 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>IBM Quantum 六爻起卦</title>
-    <link rel="stylesheet" href="./styles.css?v=8" />
+    <link rel="stylesheet" href="./styles.css?v=9" />
   </head>
   <body>
     <div class="quantum-scene" aria-hidden="true"></div>
+    <header class="platform-header">
+      <div class="brand-lockup">
+        <span class="ibm-wordmark">IBM</span>
+        <span class="product-name">Quantum Platform</span>
+      </div>
+      <nav class="platform-nav" aria-label="Platform sections">
+        <span class="active">Runtime jobs</span>
+        <span>Backends</span>
+        <span>Results</span>
+      </nav>
+      <div class="cloud-state">
+        <span class="state-dot" aria-hidden="true"></span>
+        Render cloud
+      </div>
+    </header>
+
     <main class="shell">
       <section class="masthead">
-        <div>
-          <p class="eyebrow">IBM Quantum</p>
-          <h1>量子起卦</h1>
+        <div class="title-block">
+          <p class="breadcrumb">IBM Quantum / Runtime / Liuyao job</p>
+          <p class="eyebrow">Qiskit Runtime sampler</p>
+          <h1>量子六爻起卦</h1>
+          <p class="lede">提交 6 个三量子比特测量任务，由 IBM Quantum 真机返回每一爻。</p>
         </div>
-        <div class="seal" aria-hidden="true">六</div>
+        <div class="hero-metrics" aria-label="Job settings summary">
+          <div>
+            <span>Execution</span>
+            <strong>Hardware</strong>
+          </div>
+          <div>
+            <span>Shots</span>
+            <strong>1 x 6</strong>
+          </div>
+          <div>
+            <span>Flow</span>
+            <strong>One job</strong>
+          </div>
+        </div>
       </section>
 
       <section class="workspace">
         <aside class="control-panel">
           <div class="panel-heading">
+            <span class="panel-kicker">Runtime controls</span>
             <span class="live-dot" id="liveDot"></span>
             <span id="panelTitle">就绪</span>
           </div>
@@ -39,6 +71,11 @@
             <span>一键起卦</span>
           </button>
 
+          <div class="runtime-note">
+            <span>真实 IBM Quantum 作业</span>
+            <strong>等待期间锁定本次起卦</strong>
+          </div>
+
           <dl class="status-list">
             <div>
               <dt>状态</dt>
@@ -56,7 +93,19 @@
         </aside>
 
         <section class="result-panel" aria-live="polite">
+          <div class="result-toolbar">
+            <span>Measurement result</span>
+            <span>Bottom to top</span>
+          </div>
           <div class="quantum-lines" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="processor-map" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
             <span></span>
             <span></span>
             <span></span>
@@ -78,7 +127,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden>请等待当前这一卦完成</div>
     <div id="confirmModal" class="confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
       <div class="confirm-dialog">
-        <p class="confirm-kicker">IBM Quantum</p>
+        <p class="confirm-kicker">IBM Quantum Runtime</p>
         <h2 id="confirmTitle">确定交给量子机？</h2>
         <p class="confirm-copy">确认后会提交一次真实 IBM Quantum 作业，本次等待期间只能起这一卦。</p>
         <div class="confirm-actions">
@@ -89,6 +138,6 @@
     </div>
 
     <script src="./config.js?v=2"></script>
-    <script src="./app.js?v=9"></script>
+    <script src="./app.js?v=10"></script>
   </body>
 </html>

@@ -75,6 +75,12 @@ function renderResult(result) {
     pill.textContent = record.yao_type;
 
     item.append(label, pill);
+    if (record.moving) {
+      const marker = document.createElement("span");
+      marker.className = "moving-tag";
+      marker.textContent = "动爻";
+      item.appendChild(marker);
+    }
     yaoList.appendChild(item);
   });
 }
