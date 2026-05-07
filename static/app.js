@@ -18,6 +18,8 @@ const pageNeedsLocalBackend =
   window.location.protocol === "file:" ||
   window.location.hostname.endsWith("github.io");
 const apiBase = configuredApiBase || (pageNeedsLocalBackend ? "http://127.0.0.1:8765" : "");
+const backendUnavailableMessage =
+  "后端没有连接。请先启动本地 Python 后端，或在 static/config.js 配置云端 API 地址。";
 let pollTimer = null;
 let currentRunId = null;
 let isRunning = false;
@@ -187,7 +189,7 @@ async function submitDivination() {
     currentRunId = null;
     isRunning = false;
     setRunningControls(false, "重新起卦");
-    renderError({ error: String(error) });
+    renderError({ error: error instanceof TypeError ? backendUnavailableMessage : String(error) });
   }
 }
 
