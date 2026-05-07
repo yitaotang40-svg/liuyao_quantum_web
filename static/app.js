@@ -13,7 +13,11 @@ const confirmModal = document.querySelector("#confirmModal");
 const confirmCancel = document.querySelector("#confirmCancel");
 const confirmSubmit = document.querySelector("#confirmSubmit");
 
-const apiBase = window.location.protocol === "file:" ? "http://127.0.0.1:8765" : "";
+const configuredApiBase = (window.LIUYAO_API_BASE || "").replace(/\/$/, "");
+const pageNeedsLocalBackend =
+  window.location.protocol === "file:" ||
+  window.location.hostname.endsWith("github.io");
+const apiBase = configuredApiBase || (pageNeedsLocalBackend ? "http://127.0.0.1:8765" : "");
 let pollTimer = null;
 let currentRunId = null;
 let isRunning = false;

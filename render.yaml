@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: liuyao-quantum-web
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: IBM_QUANTUM_CHANNEL
+        value: ibm_quantum_platform
+      - key: IBM_QUANTUM_API_KEY
+        sync: false
+      - key: IBM_QUANTUM_INSTANCE
+        sync: false

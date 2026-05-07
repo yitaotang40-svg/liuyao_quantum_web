@@ -3,28 +3,30 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import mimetypes
 import os
 import socket
-import sys
 import threading
 import time
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 from urllib.parse import unquote, urlparse
+
+from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
+from qiskit.transpiler import generate_preset_pass_manager
+from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
 
 
 APP_DIR = Path(__file__).resolve().parent
 STATIC_DIR = APP_DIR / "static"
 RESULTS_DIR = APP_DIR / "results"
-LIUYAO_SCRIPT = Path("/Users/yitao/Downloads/ibm_liuyao_qiskit.py")
+YAO_NAMES = {1: "初爻", 2: "二爻", 3: "三爻", 4: "四爻", 5: "五爻", 6: "上爻"}
 
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
@@ -42,21 +44,17 @@ ACTIVE_STATUSES = {
 }
 
 
-def load_liuyao_module():
-    if not LIUYAO_SCRIPT.exists():
-        raise FileNotFoundError(f"找不到起卦脚本: {LIUYAO_SCRIPT}")
-
-    spec = importlib.util.spec_from_file_location("ibm_liuyao_qiskit", LIUYAO_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"无法加载起卦脚本: {LIUYAO_SCRIPT}")
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-LIUYAO = load_liuyao_module()
+@dataclass
+class YaoRecord:
+    yao: int
+    yao_name: str
+    bits: str
+    backs: int
+    symbol: str
+    yao_type: str
+    moving: bool
+    ben: str
+    bian: str
 
 
 def now_label() -> str:
@@ -102,18 +100,81 @@ def runtime_status_name(status: Any) -> str:
     return text.upper()
 
 
-def service_args(backend_name: str | None) -> SimpleNamespace:
-    return SimpleNamespace(
-        token=None,
-        instance=None,
-        channel=os.getenv("IBM_QUANTUM_CHANNEL", "ibm_quantum_platform"),
-        backend=backend_name,
-        save_account=False,
-        optimization_level=1,
-        print_circuit=False,
-        calibrate_shots=0,
-        output=None,
-    )
+def build_single_yao_circuit(register_name: str = "meas") -> QuantumCircuit:
+    qr = QuantumRegister(3, "q")
+    cr = ClassicalRegister(3, register_name)
+    qc = QuantumCircuit(qr, cr, name="single_yao")
+    qc.h(qr[0])
+    qc.h(qr[1])
+    qc.h(qr[2])
+    qc.measure(qr, cr)
+    return qc
+
+
+def make_service() -> QiskitRuntimeService:
+    token = os.getenv("IBM_QUANTUM_API_KEY") or os.getenv("QISKIT_IBM_TOKEN")
+    instance = os.getenv("IBM_QUANTUM_INSTANCE")
+    channel = os.getenv("IBM_QUANTUM_CHANNEL", "ibm_quantum_platform")
+
+    if token:
+        kwargs: dict[str, Any] = {"channel": channel, "token": token}
+        if instance:
+            kwargs["instance"] = instance
+        return QiskitRuntimeService(**kwargs)
+
+    kwargs = {"channel": channel}
+    if instance:
+        kwargs["instance"] = instance
+    return QiskitRuntimeService(**kwargs)
+
+
+def choose_backend(service: QiskitRuntimeService, backend_name: str | None = None):
+    if backend_name:
+        return service.backend(backend_name)
+    return service.least_busy(operational=True, simulator=False, min_num_qubits=3)
+
+
+def map_bitstring_to_yao(bitstring: str, *, one_means_back: bool = True) -> dict[str, Any]:
+    if len(bitstring) != 3 or any(ch not in "01" for ch in bitstring):
+        raise ValueError(f"非法 bitstring: {bitstring!r}")
+
+    backs = bitstring.count("1") if one_means_back else bitstring.count("0")
+    if backs == 0:
+        return {"backs": 0, "symbol": "交", "yao_type": "老阴", "moving": True, "ben": "阴", "bian": "阳"}
+    if backs == 1:
+        return {"backs": 1, "symbol": "单", "yao_type": "少阳", "moving": False, "ben": "阳", "bian": "阳"}
+    if backs == 2:
+        return {"backs": 2, "symbol": "拆", "yao_type": "少阴", "moving": False, "ben": "阴", "bian": "阴"}
+    return {"backs": 3, "symbol": "重", "yao_type": "老阳", "moving": True, "ben": "阳", "bian": "阴"}
+
+
+def ben_summary_label(record: YaoRecord) -> str:
+    return record.yao_type if record.moving else record.ben
+
+
+def build_result_payload(records: list[YaoRecord], *, backend_name: str, job_id: str) -> dict[str, Any]:
+    ben_gua = [r.ben for r in records]
+    bian_gua = [r.bian for r in records]
+    dong_yao = [r.yao for r in records if r.moving]
+    dong_yao_detail = [f"{r.yao}={r.yao_type}" for r in records if r.moving]
+
+    return {
+        "backend": backend_name,
+        "job_id": job_id,
+        "convention": {
+            "bit_meaning": "1=背, 0=字",
+            "order": "初爻到上爻，自下而上",
+            "execution": "3 qubits per yao, 6 pubs, 1 shot each",
+        },
+        "raw_bits_bottom_to_top": [r.bits for r in records],
+        "yao_records": [asdict(r) for r in records],
+        "ben_gua_bottom_to_top": ben_gua,
+        "ben_gua_summary_bottom_to_top": [ben_summary_label(r) for r in records],
+        "bian_gua_bottom_to_top": bian_gua,
+        "yao_types_bottom_to_top": [r.yao_type for r in records],
+        "dong_yao": dong_yao,
+        "dong_yao_detail": dong_yao_detail,
+    }
 
 
 def compact_result(payload: dict[str, Any]) -> dict[str, Any]:
@@ -140,18 +201,18 @@ def run_divination(run_id: str, backend_name: str | None) -> None:
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
         set_job(run_id, status="CONNECTING", status_label="连接 IBM Quantum", backend=backend_name or "自动选择")
-        args = service_args(backend_name)
-        service = LIUYAO.make_service(args)
+        service = make_service()
 
         set_job(run_id, status="SELECTING_BACKEND", status_label="选择量子机")
-        backend = LIUYAO.choose_backend(service, backend_name)
+        backend = choose_backend(service, backend_name)
         set_job(run_id, backend=backend.name)
 
         set_job(run_id, status="TRANSPILING", status_label="编译量子电路")
-        qc = LIUYAO.build_single_yao_circuit(register_name="meas")
-        pm = LIUYAO.generate_preset_pass_manager(backend=backend, optimization_level=args.optimization_level)
+        qc = build_single_yao_circuit(register_name="meas")
+        optimization_level = int(os.getenv("QISKIT_OPTIMIZATION_LEVEL", "1"))
+        pm = generate_preset_pass_manager(backend=backend, optimization_level=optimization_level)
         isa_circuit = pm.run(qc)
-        sampler = LIUYAO.Sampler(mode=backend)
+        sampler = Sampler(mode=backend)
 
         set_job(run_id, status="SUBMITTING", status_label="提交到量子机")
         pubs = [isa_circuit for _ in range(6)]
@@ -180,11 +241,11 @@ def run_divination(run_id: str, backend_name: str | None) -> None:
             if len(bitstrings) != 1:
                 raise RuntimeError(f"第 {idx} 爻返回 {len(bitstrings)} 条 bitstring，预期 1 条。")
             bits = bitstrings[0]
-            mapped = LIUYAO.map_bitstring_to_yao(bits, one_means_back=True)
+            mapped = map_bitstring_to_yao(bits, one_means_back=True)
             records.append(
-                LIUYAO.YaoRecord(
+                YaoRecord(
                     yao=idx,
-                    yao_name=LIUYAO.YAO_NAMES[idx],
+                    yao_name=YAO_NAMES[idx],
                     bits=bits,
                     backs=mapped["backs"],
                     symbol=mapped["symbol"],
@@ -195,7 +256,7 @@ def run_divination(run_id: str, backend_name: str | None) -> None:
                 )
             )
 
-        payload = LIUYAO.build_result_payload(records, backend_name=backend.name, job_id=job_id)
+        payload = build_result_payload(records, backend_name=backend.name, job_id=job_id)
         output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         set_job(
             run_id,
@@ -260,6 +321,10 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
+
+        if path == "/api/health":
+            self.json_response({"ok": True, "service": "liuyao_quantum_web"})
+            return
 
         if path == "/api/active-job":
             self.json_response({"job": get_active_job()})
@@ -329,7 +394,7 @@ def port_is_free(host: str, port: int) -> bool:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="IBM Quantum 六爻起卦本地网站")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "8765")))
     return parser.parse_args()
 
 

@@ -1,6 +1,6 @@
 # IBM Quantum 六爻起卦网站
 
-一个量子计算机风格的六爻起卦网页。前端可以部署到 GitHub Pages，本地后端负责调用 IBM Quantum/Qiskit 真机任务。
+一个量子计算机风格的六爻起卦网页。前端可以部署到 GitHub Pages，Python 后端负责调用 IBM Quantum/Qiskit 真机任务。
 
 ## 本地运行
 
@@ -18,5 +18,25 @@ http://127.0.0.1:8765
 
 - 结果区只显示初爻到上爻六条结果。
 - 状态栏显示等待状态、量子机和 Job ID。
-- IBM Quantum API key 不在仓库里；后端会读取本机已保存的 Qiskit Runtime 账号。
-- GitHub Pages 只能托管静态网页，不能直接运行 Qiskit/Python 后端。
+- IBM Quantum API key 不在仓库里；本地后端会读取本机已保存的 Qiskit Runtime 账号。
+- 部署到云端时，把 `IBM_QUANTUM_API_KEY` 和 `IBM_QUANTUM_INSTANCE` 放到服务器环境变量里。
+- GitHub Pages 只能托管静态网页，不能直接运行 Qiskit/Python 后端；真机起卦必须有 Python 后端在运行。
+
+## 云端部署思路
+
+1. 把仓库部署到 Render/Railway/Fly.io/Cloud Run 这类能运行 Python 的平台。
+2. Start command 使用：
+
+```bash
+python app.py --host 0.0.0.0 --port $PORT
+```
+
+3. 在平台环境变量里设置：
+
+```text
+IBM_QUANTUM_API_KEY=你的 IBM Quantum API key
+IBM_QUANTUM_INSTANCE=你的 IBM Quantum instance CRN
+IBM_QUANTUM_CHANNEL=ibm_quantum_platform
+```
+
+4. 如果前端继续用 GitHub Pages，部署后把 `static/config.js` 里的 `window.LIUYAO_API_BASE` 改成你的后端 URL。
