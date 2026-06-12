@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>IBM Quantum 六爻起卦</title>
-    <link rel="stylesheet" href="./styles.css?v=9" />
+    <link rel="stylesheet" href="./styles.css?v=10" />
   </head>
   <body>
     <div class="quantum-scene" aria-hidden="true"></div>
@@ -56,24 +56,105 @@
             <span id="panelTitle">就绪</span>
           </div>
 
-          <label class="field">
-            <span>量子机</span>
-            <select id="backendSelect">
-              <option value="">自动选择</option>
-              <option value="ibm_kingston">ibm_kingston</option>
-              <option value="ibm_marrakesh">ibm_marrakesh</option>
-              <option value="ibm_fez">ibm_fez</option>
-            </select>
-          </label>
+          <div class="mode-switch" role="tablist" aria-label="起卦方式">
+            <button class="mode-tab is-active" type="button" role="tab" aria-selected="true" data-mode="quantum">IBM 量子</button>
+            <button class="mode-tab" type="button" role="tab" aria-selected="false" data-mode="manual">手动排盘</button>
+          </div>
 
-          <button id="castButton" type="button">
-            <span class="button-mark" aria-hidden="true"></span>
-            <span>一键起卦</span>
-          </button>
+          <div class="mode-panel" data-mode-panel="quantum">
+            <label class="field">
+              <span>量子机</span>
+              <select id="backendSelect">
+                <option value="">自动选择</option>
+                <option value="ibm_kingston">ibm_kingston</option>
+                <option value="ibm_marrakesh">ibm_marrakesh</option>
+                <option value="ibm_fez">ibm_fez</option>
+              </select>
+            </label>
 
-          <div class="runtime-note">
-            <span>真实 IBM Quantum 作业</span>
-            <strong>等待期间锁定本次起卦</strong>
+            <button id="castButton" type="button">
+              <span class="button-mark" aria-hidden="true"></span>
+              <span>一键起卦</span>
+            </button>
+
+            <div class="runtime-note">
+              <span>真实 IBM Quantum 作业</span>
+              <strong>等待期间锁定本次起卦</strong>
+            </div>
+          </div>
+
+          <div class="mode-panel manual-panel" data-mode-panel="manual" hidden>
+            <label class="field">
+              <span>起卦时间</span>
+              <input id="manualDateTime" type="datetime-local" />
+            </label>
+
+            <div class="manual-yaos" aria-label="自下而上六爻">
+              <label>
+                <span>初爻</span>
+                <select data-manual-yao="1">
+                  <option value="young_yang">少阳</option>
+                  <option value="young_yin">少阴</option>
+                  <option value="old_yang">老阳</option>
+                  <option value="old_yin">老阴</option>
+                </select>
+              </label>
+              <label>
+                <span>二爻</span>
+                <select data-manual-yao="2">
+                  <option value="young_yang">少阳</option>
+                  <option value="young_yin">少阴</option>
+                  <option value="old_yang">老阳</option>
+                  <option value="old_yin">老阴</option>
+                </select>
+              </label>
+              <label>
+                <span>三爻</span>
+                <select data-manual-yao="3">
+                  <option value="young_yang">少阳</option>
+                  <option value="young_yin">少阴</option>
+                  <option value="old_yang">老阳</option>
+                  <option value="old_yin">老阴</option>
+                </select>
+              </label>
+              <label>
+                <span>四爻</span>
+                <select data-manual-yao="4">
+                  <option value="young_yang">少阳</option>
+                  <option value="young_yin">少阴</option>
+                  <option value="old_yang">老阳</option>
+                  <option value="old_yin">老阴</option>
+                </select>
+              </label>
+              <label>
+                <span>五爻</span>
+                <select data-manual-yao="5">
+                  <option value="young_yang">少阳</option>
+                  <option value="young_yin">少阴</option>
+                  <option value="old_yang">老阳</option>
+                  <option value="old_yin">老阴</option>
+                </select>
+              </label>
+              <label>
+                <span>上爻</span>
+                <select data-manual-yao="6">
+                  <option value="young_yang">少阳</option>
+                  <option value="young_yin">少阴</option>
+                  <option value="old_yang">老阳</option>
+                  <option value="old_yin">老阴</option>
+                </select>
+              </label>
+            </div>
+
+            <button id="manualSubmitButton" type="button">
+              <span class="button-mark manual" aria-hidden="true"></span>
+              <span>手动装卦</span>
+            </button>
+
+            <div class="runtime-note manual-note">
+              <span>手工指定</span>
+              <strong>按初爻到上爻排盘</strong>
+            </div>
           </div>
 
           <dl class="status-list">
@@ -138,6 +219,6 @@
     </div>
 
     <script src="./config.js?v=2"></script>
-    <script src="./app.js?v=10"></script>
+    <script src="./app.js?v=12"></script>
   </body>
 </html>

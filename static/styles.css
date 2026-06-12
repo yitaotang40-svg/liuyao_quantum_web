@@ -210,7 +210,7 @@ h1 {
   font-size: clamp(48px, 7vw, 104px);
   line-height: 0.9;
   font-weight: 300;
-  letter-spacing: -0.055em;
+  letter-spacing: 0;
 }
 
 .lede {
@@ -251,7 +251,7 @@ h1 {
   margin-top: 34px;
   color: var(--text-primary);
   font: 500 22px var(--sans);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .workspace {
@@ -335,7 +335,8 @@ h1 {
   font-weight: 600;
 }
 
-select {
+select,
+input[type="datetime-local"] {
   width: 100%;
   height: 48px;
   border: 1px solid transparent;
@@ -349,6 +350,7 @@ select {
 }
 
 select:focus,
+input[type="datetime-local"]:focus,
 button:focus-visible,
 .ghost-button:focus-visible,
 .solid-button:focus-visible {
@@ -356,7 +358,8 @@ button:focus-visible,
   outline-offset: -2px;
 }
 
-select option {
+select option,
+input[type="datetime-local"] {
   background: var(--layer-01);
   color: var(--text-primary);
 }
@@ -405,6 +408,74 @@ button.is-busy {
 button.is-busy .button-mark {
   border-top-color: transparent;
   animation: spin 900ms linear infinite;
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-bottom: 22px;
+  background: var(--border-subtle);
+}
+
+.mode-tab {
+  height: 44px;
+  margin: 0;
+  justify-content: center;
+  background: var(--layer-02);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.mode-tab:hover {
+  background: var(--layer-03);
+}
+
+.mode-tab.is-active {
+  background: var(--interactive);
+  color: #ffffff;
+}
+
+.mode-panel[hidden] {
+  display: none !important;
+}
+
+.manual-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.manual-yaos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.manual-yaos label {
+  display: grid;
+  gap: 7px;
+}
+
+.manual-yaos span {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.manual-yaos select {
+  height: 42px;
+  padding-left: 12px;
+  font-size: 14px;
+}
+
+.button-mark.manual {
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.manual-note {
+  margin-top: 2px;
+  border-left-color: var(--cyan);
 }
 
 .runtime-note {
@@ -607,7 +678,7 @@ dd {
   color: var(--text-primary);
   font-size: clamp(24px, 3vw, 42px);
   font-weight: 300;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .yao-list {
@@ -663,6 +734,186 @@ dd {
   padding: 0.28em 0.56em;
   font: 12px var(--mono);
   letter-spacing: 0.08em;
+}
+
+.yao-list.chart-mode {
+  width: calc(100% - 16px);
+  margin-left: 8px;
+  gap: 0;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.reading-card {
+  display: block;
+  border: 1px solid #c2cad5;
+  background: #eef4fb;
+  color: #111111;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+  padding: 18px;
+  overflow-x: auto;
+}
+
+.time-board,
+.gua-heading,
+.chart-grid {
+  min-width: 736px;
+}
+
+.time-board {
+  display: grid;
+  gap: 8px;
+  color: #111111;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.time-board strong {
+  margin-left: 6px;
+  color: #d71920;
+  font-weight: 500;
+}
+
+.time-board span {
+  color: #111111;
+}
+
+.time-board b {
+  color: #d71920;
+  font-weight: 500;
+}
+
+.date-line {
+  font-size: 20px;
+}
+
+.gua-heading {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 30px 0 8px;
+  color: #111111;
+  text-align: center;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 52px 116px minmax(190px, 1fr) 64px minmax(190px, 1fr) 114px;
+  align-items: center;
+  border-bottom: 1px solid #a5acb5;
+}
+
+.chart-head {
+  padding: 8px;
+  color: #111111;
+  font-size: 19px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.chart-row {
+  display: contents;
+}
+
+.spirit-cell,
+.hidden-cell,
+.hex-cell,
+.mark-cell,
+.quantum-cell {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgba(17, 17, 17, 0.08);
+  color: #111111;
+  padding: 6px;
+}
+
+.spirit-cell {
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.hidden-cell {
+  min-width: 0;
+  color: #111111;
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.hex-cell {
+  gap: 10px;
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.line-text {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.hex-line {
+  flex: 0 0 88px;
+  height: 14px;
+  display: flex;
+  gap: 14px;
+}
+
+.hex-line i {
+  display: block;
+  height: 14px;
+  background: #111111;
+  flex: 1 1 0;
+}
+
+.hex-line.yang i {
+  flex-basis: 100%;
+}
+
+.mark-cell {
+  justify-content: center;
+  gap: 6px;
+  font-size: 19px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.position-tag {
+  border: 1px solid rgba(17, 17, 17, 0.28);
+  padding: 2px 5px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.change-mark {
+  color: #111111;
+}
+
+.quantum-cell {
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.quantum-cell strong {
+  color: var(--interactive);
+  font: 700 14px var(--mono);
+}
+
+.quantum-cell span {
+  color: #353b42;
+}
+
+.quantum-cell em {
+  color: #111111;
+  font-style: normal;
+  font-weight: 700;
 }
 
 .empty,
@@ -746,7 +997,7 @@ dd {
   font-size: clamp(30px, 5vw, 46px);
   line-height: 1;
   font-weight: 300;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 .confirm-copy {
@@ -951,8 +1202,23 @@ dd {
     margin-left: 16px;
   }
 
+  .yao-list.chart-mode {
+    width: calc(100% - 16px);
+    margin-left: 8px;
+  }
+
   .result-title {
     margin-top: 32px;
+  }
+
+  .reading-card {
+    padding: 14px;
+  }
+
+  .time-board,
+  .gua-heading,
+  .chart-grid {
+    min-width: 736px;
   }
 
   .yao-row,

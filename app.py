@@ -11,12 +11,13 @@ import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
+from zoneinfo import ZoneInfo
 
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 from qiskit.transpiler import generate_preset_pass_manager
@@ -27,6 +28,252 @@ APP_DIR = Path(__file__).resolve().parent
 STATIC_DIR = APP_DIR / "static"
 RESULTS_DIR = APP_DIR / "results"
 YAO_NAMES = {1: "初爻", 2: "二爻", 3: "三爻", 4: "四爻", 5: "五爻", 6: "上爻"}
+
+STEMS = "甲乙丙丁戊己庚辛壬癸"
+BRANCHES = "子丑寅卯辰巳午未申酉戌亥"
+GANZHI = [STEMS[i % 10] + BRANCHES[i % 12] for i in range(60)]
+DAY_CALIBRATION_DATE = datetime(2026, 7, 7, tzinfo=ZoneInfo("Asia/Shanghai")).date()
+DAY_CALIBRATION_INDEX = GANZHI.index("戊午")
+
+SOLAR_TERM_NAMES = [
+    "小寒",
+    "大寒",
+    "立春",
+    "雨水",
+    "惊蛰",
+    "春分",
+    "清明",
+    "谷雨",
+    "立夏",
+    "小满",
+    "芒种",
+    "夏至",
+    "小暑",
+    "大暑",
+    "立秋",
+    "处暑",
+    "白露",
+    "秋分",
+    "寒露",
+    "霜降",
+    "立冬",
+    "小雪",
+    "大雪",
+    "冬至",
+]
+SOLAR_TERM_INFO_MINUTES = [
+    0,
+    21208,
+    42467,
+    63836,
+    85337,
+    107014,
+    128867,
+    150921,
+    173149,
+    195551,
+    218072,
+    240693,
+    263343,
+    285989,
+    308563,
+    331033,
+    353350,
+    375494,
+    397447,
+    419210,
+    440795,
+    462224,
+    483532,
+    504758,
+]
+JIE_MONTH_INDEX = {2: 0, 4: 1, 6: 2, 8: 3, 10: 4, 12: 5, 14: 6, 16: 7, 18: 8, 20: 9, 22: 10, 0: 11}
+MONTH_START_STEM_BY_YEAR_STEM = {
+    "甲": "丙",
+    "己": "丙",
+    "乙": "戊",
+    "庚": "戊",
+    "丙": "庚",
+    "辛": "庚",
+    "丁": "壬",
+    "壬": "壬",
+    "戊": "甲",
+    "癸": "甲",
+}
+HOUR_START_STEM_BY_DAY_STEM = {
+    "甲": "甲",
+    "己": "甲",
+    "乙": "丙",
+    "庚": "丙",
+    "丙": "戊",
+    "辛": "戊",
+    "丁": "庚",
+    "壬": "庚",
+    "戊": "壬",
+    "癸": "壬",
+}
+XUNKONG = {
+    0: "戌亥",
+    10: "申酉",
+    20: "午未",
+    30: "辰巳",
+    40: "寅卯",
+    50: "子丑",
+}
+YIMA_BY_BRANCH_GROUP = {
+    "申子辰": "寅",
+    "寅午戌": "申",
+    "巳酉丑": "亥",
+    "亥卯未": "巳",
+}
+TAOHUA_BY_BRANCH_GROUP = {
+    "申子辰": "酉",
+    "寅午戌": "卯",
+    "巳酉丑": "午",
+    "亥卯未": "子",
+}
+RILU_BY_STEM = {
+    "甲": "寅",
+    "乙": "卯",
+    "丙": "巳",
+    "丁": "午",
+    "戊": "巳",
+    "己": "午",
+    "庚": "申",
+    "辛": "酉",
+    "壬": "亥",
+    "癸": "子",
+}
+GUIREN_BY_STEM = {
+    "甲": "丑, 未",
+    "戊": "丑, 未",
+    "庚": "丑, 未",
+    "乙": "子, 申",
+    "己": "子, 申",
+    "丙": "亥, 酉",
+    "丁": "亥, 酉",
+    "壬": "巳, 卯",
+    "癸": "巳, 卯",
+    "辛": "午, 寅",
+}
+
+TRIGRAM_BITS = {
+    (1, 1, 1): "乾",
+    (0, 1, 1): "巽",
+    (0, 0, 1): "艮",
+    (0, 0, 0): "坤",
+    (1, 0, 0): "震",
+    (0, 1, 0): "坎",
+    (1, 0, 1): "离",
+    (1, 1, 0): "兑",
+}
+TRIGRAM_LINES = {name: bits for bits, name in TRIGRAM_BITS.items()}
+TRIGRAM_ELEMENTS = {"乾": "金", "兑": "金", "离": "火", "震": "木", "巽": "木", "坎": "水", "艮": "土", "坤": "土"}
+TRIGRAM_NAJIA = {
+    "乾": {"inner": ["甲子", "甲寅", "甲辰"], "outer": ["壬午", "壬申", "壬戌"]},
+    "兑": {"inner": ["丁巳", "丁卯", "丁丑"], "outer": ["丁亥", "丁酉", "丁未"]},
+    "离": {"inner": ["己卯", "己丑", "己亥"], "outer": ["己酉", "己未", "己巳"]},
+    "震": {"inner": ["庚子", "庚寅", "庚辰"], "outer": ["庚午", "庚申", "庚戌"]},
+    "巽": {"inner": ["辛丑", "辛亥", "辛酉"], "outer": ["辛未", "辛巳", "辛卯"]},
+    "坎": {"inner": ["戊寅", "戊辰", "戊午"], "outer": ["戊申", "戊戌", "戊子"]},
+    "艮": {"inner": ["丙辰", "丙午", "丙申"], "outer": ["丙戌", "丙子", "丙寅"]},
+    "坤": {"inner": ["乙未", "乙巳", "乙卯"], "outer": ["癸丑", "癸亥", "癸酉"]},
+}
+HEXAGRAM_NAMES = {
+    ("乾", "乾"): "乾为天",
+    ("乾", "兑"): "天泽履",
+    ("乾", "离"): "天火同人",
+    ("乾", "震"): "天雷无妄",
+    ("乾", "巽"): "天风姤",
+    ("乾", "坎"): "天水讼",
+    ("乾", "艮"): "天山遁",
+    ("乾", "坤"): "天地否",
+    ("兑", "乾"): "泽天夬",
+    ("兑", "兑"): "兑为泽",
+    ("兑", "离"): "泽火革",
+    ("兑", "震"): "泽雷随",
+    ("兑", "巽"): "泽风大过",
+    ("兑", "坎"): "泽水困",
+    ("兑", "艮"): "泽山咸",
+    ("兑", "坤"): "泽地萃",
+    ("离", "乾"): "火天大有",
+    ("离", "兑"): "火泽睽",
+    ("离", "离"): "离为火",
+    ("离", "震"): "火雷噬嗑",
+    ("离", "巽"): "火风鼎",
+    ("离", "坎"): "火水未济",
+    ("离", "艮"): "火山旅",
+    ("离", "坤"): "火地晋",
+    ("震", "乾"): "雷天大壮",
+    ("震", "兑"): "雷泽归妹",
+    ("震", "离"): "雷火丰",
+    ("震", "震"): "震为雷",
+    ("震", "巽"): "雷风恒",
+    ("震", "坎"): "雷水解",
+    ("震", "艮"): "雷山小过",
+    ("震", "坤"): "雷地豫",
+    ("巽", "乾"): "风天小畜",
+    ("巽", "兑"): "风泽中孚",
+    ("巽", "离"): "风火家人",
+    ("巽", "震"): "风雷益",
+    ("巽", "巽"): "巽为风",
+    ("巽", "坎"): "风水涣",
+    ("巽", "艮"): "风山渐",
+    ("巽", "坤"): "风地观",
+    ("坎", "乾"): "水天需",
+    ("坎", "兑"): "水泽节",
+    ("坎", "离"): "水火既济",
+    ("坎", "震"): "水雷屯",
+    ("坎", "巽"): "水风井",
+    ("坎", "坎"): "坎为水",
+    ("坎", "艮"): "水山蹇",
+    ("坎", "坤"): "水地比",
+    ("艮", "乾"): "山天大畜",
+    ("艮", "兑"): "山泽损",
+    ("艮", "离"): "山火贲",
+    ("艮", "震"): "山雷颐",
+    ("艮", "巽"): "山风蛊",
+    ("艮", "坎"): "山水蒙",
+    ("艮", "艮"): "艮为山",
+    ("艮", "坤"): "山地剥",
+    ("坤", "乾"): "地天泰",
+    ("坤", "兑"): "地泽临",
+    ("坤", "离"): "地火明夷",
+    ("坤", "震"): "地雷复",
+    ("坤", "巽"): "地风升",
+    ("坤", "坎"): "地水师",
+    ("坤", "艮"): "地山谦",
+    ("坤", "坤"): "坤为地",
+}
+BRANCH_ELEMENTS = {
+    "子": "水",
+    "亥": "水",
+    "寅": "木",
+    "卯": "木",
+    "巳": "火",
+    "午": "火",
+    "申": "金",
+    "酉": "金",
+    "辰": "土",
+    "戌": "土",
+    "丑": "土",
+    "未": "土",
+}
+GENERATES = {"木": "火", "火": "土", "土": "金", "金": "水", "水": "木"}
+CONTROLS = {"木": "土", "土": "水", "水": "火", "火": "金", "金": "木"}
+SIX_SPIRITS = ["青龙", "朱雀", "勾陈", "螣蛇", "白虎", "玄武"]
+SIX_SPIRIT_START_BY_DAY_STEM = {
+    "甲": 0,
+    "乙": 0,
+    "丙": 1,
+    "丁": 1,
+    "戊": 2,
+    "己": 3,
+    "庚": 4,
+    "辛": 4,
+    "壬": 5,
+    "癸": 5,
+}
 
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
@@ -59,6 +306,306 @@ class YaoRecord:
 
 def now_label() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def cast_timezone() -> ZoneInfo:
+    return ZoneInfo(os.getenv("CAST_TIMEZONE", "Asia/Shanghai"))
+
+
+def solar_terms_for_year(year: int, tz: ZoneInfo) -> list[dict[str, Any]]:
+    base = datetime(1900, 1, 6, 2, 5, tzinfo=timezone.utc)
+    year_offset_ms = 31556925974.7 * (year - 1900)
+    terms = []
+    for idx, minutes in enumerate(SOLAR_TERM_INFO_MINUTES):
+        instant = base + timedelta(milliseconds=year_offset_ms + minutes * 60000)
+        terms.append({"index": idx, "name": SOLAR_TERM_NAMES[idx], "time": instant.astimezone(tz)})
+    return terms
+
+
+def nearest_solar_terms(moment: datetime) -> tuple[dict[str, Any], dict[str, Any]]:
+    tz = cast_timezone()
+    local = moment.astimezone(tz)
+    terms = []
+    for year in (local.year - 1, local.year, local.year + 1):
+        terms.extend(solar_terms_for_year(year, tz))
+    terms.sort(key=lambda item: item["time"])
+    previous = terms[0]
+    next_term = terms[-1]
+    for idx, term in enumerate(terms):
+        if term["time"] <= local:
+            previous = term
+            if idx + 1 < len(terms):
+                next_term = terms[idx + 1]
+    return previous, next_term
+
+
+def solar_term_for_local_date(moment: datetime) -> dict[str, Any] | None:
+    tz = cast_timezone()
+    local = moment.astimezone(tz)
+    for year in (local.year - 1, local.year, local.year + 1):
+        for term in solar_terms_for_year(year, tz):
+            if term["time"].date() == local.date():
+                return term
+    return None
+
+
+def ganzhi_index(stem: str, branch: str) -> int:
+    return GANZHI.index(stem + branch)
+
+
+def year_ganzhi(moment: datetime) -> str:
+    tz = cast_timezone()
+    local = moment.astimezone(tz)
+    lichun = solar_terms_for_year(local.year, tz)[2]["time"]
+    ganzhi_year = local.year if local >= lichun else local.year - 1
+    return GANZHI[(ganzhi_year - 1984) % 60]
+
+
+def month_ganzhi(moment: datetime, year_pillar: str) -> str:
+    tz = cast_timezone()
+    local = moment.astimezone(tz)
+    terms = []
+    for year in (local.year - 1, local.year, local.year + 1):
+        terms.extend(term for term in solar_terms_for_year(year, tz) if term["index"] in JIE_MONTH_INDEX)
+    terms.sort(key=lambda item: item["time"])
+    active_jie = max((term for term in terms if term["time"] <= local), key=lambda item: item["time"])
+    month_idx = JIE_MONTH_INDEX[active_jie["index"]]
+    branch = BRANCHES[(2 + month_idx) % 12]
+    start_stem = MONTH_START_STEM_BY_YEAR_STEM[year_pillar[0]]
+    stem = STEMS[(STEMS.index(start_stem) + month_idx) % 10]
+    return stem + branch
+
+
+def day_ganzhi(moment: datetime) -> str:
+    local_date = moment.astimezone(cast_timezone()).date()
+    delta_days = (local_date - DAY_CALIBRATION_DATE).days
+    return GANZHI[(DAY_CALIBRATION_INDEX + delta_days) % 60]
+
+
+def hour_ganzhi(moment: datetime, day_pillar: str) -> str:
+    local = moment.astimezone(cast_timezone())
+    hour = local.hour
+    branch_idx = 0 if hour == 23 else (hour + 1) // 2
+    branch = BRANCHES[branch_idx % 12]
+    start_stem = HOUR_START_STEM_BY_DAY_STEM[day_pillar[0]]
+    stem = STEMS[(STEMS.index(start_stem) + branch_idx) % 10]
+    return stem + branch
+
+
+def xunkong_for_day(day_pillar: str) -> str:
+    idx = GANZHI.index(day_pillar)
+    xun_start = idx - (idx % 10)
+    return XUNKONG[xun_start]
+
+
+def branch_group_value(branch: str, table: dict[str, str]) -> str:
+    for group, value in table.items():
+        if branch in group:
+            return value
+    raise ValueError(f"未找到地支分组: {branch}")
+
+
+def shensha_for_day(day_pillar: str) -> dict[str, str]:
+    stem, branch = day_pillar[0], day_pillar[1]
+    return {
+        "yima": branch_group_value(branch, YIMA_BY_BRANCH_GROUP),
+        "taohua": branch_group_value(branch, TAOHUA_BY_BRANCH_GROUP),
+        "rilu": RILU_BY_STEM[stem],
+        "guiren": GUIREN_BY_STEM[stem],
+    }
+
+
+def ganzhi_context(moment: datetime | None = None) -> dict[str, Any]:
+    local = (moment or datetime.now(cast_timezone())).astimezone(cast_timezone())
+    previous_term, next_term = nearest_solar_terms(local)
+    display_term = solar_term_for_local_date(local) or previous_term
+    year_pillar = year_ganzhi(local)
+    month_pillar = month_ganzhi(local, year_pillar)
+    day_pillar = day_ganzhi(local)
+    hour_pillar = hour_ganzhi(local, day_pillar)
+    return {
+        "timezone": str(cast_timezone()),
+        "iso": local.isoformat(),
+        "date_label": f"{display_term['name']}：{local.year:04d}年{local.month:02d}月{local.day:02d}日{local.hour:02d}时{local.minute:02d}分",
+        "date_parts": {
+            "year": local.year,
+            "month": local.month,
+            "day": local.day,
+            "hour": local.hour,
+            "minute": local.minute,
+        },
+        "solar_term": display_term["name"],
+        "active_solar_term": previous_term["name"],
+        "next_solar_term": {
+            "name": next_term["name"],
+            "time": next_term["time"].isoformat(),
+        },
+        "pillars": {
+            "year": year_pillar,
+            "month": month_pillar,
+            "day": day_pillar,
+            "hour": hour_pillar,
+        },
+        "xunkong": xunkong_for_day(day_pillar),
+        "shensha": shensha_for_day(day_pillar),
+    }
+
+
+def line_bits_from_records(records: list[YaoRecord], attr: str) -> list[int]:
+    return [1 if getattr(record, attr) == "阳" else 0 for record in records]
+
+
+def trigrams_from_lines(lines: list[int]) -> tuple[str, str]:
+    lower = TRIGRAM_BITS[tuple(lines[:3])]
+    upper = TRIGRAM_BITS[tuple(lines[3:])]
+    return lower, upper
+
+
+def determine_palace(lines: list[int]) -> tuple[str, int, int]:
+    cur = list(lines)
+    if cur[:3] == cur[3:]:
+        return TRIGRAM_BITS[tuple(cur[:3])], 5, 2
+
+    for idx in range(5):
+        cur[idx] ^= 1
+        if cur[:3] == cur[3:]:
+            shi = idx
+            ying = (shi + 3) % 6
+            return TRIGRAM_BITS[tuple(cur[:3])], shi, ying
+
+    for idx in range(3, -1, -1):
+        cur[idx] ^= 1
+        if cur[:3] == cur[3:]:
+            shi = 2 if idx == 0 else idx
+            ying = (shi + 3) % 6
+            return TRIGRAM_BITS[tuple(cur[:3])], shi, ying
+
+    raise ValueError(f"无法安世应: {lines}")
+
+
+def ganzi_element(ganzi: str) -> str:
+    return BRANCH_ELEMENTS[ganzi[1]]
+
+
+def six_relation(palace_element: str, branch_element: str) -> str:
+    if palace_element == branch_element:
+        return "兄弟"
+    if GENERATES[branch_element] == palace_element:
+        return "父母"
+    if CONTROLS[branch_element] == palace_element:
+        return "官鬼"
+    if GENERATES[palace_element] == branch_element:
+        return "子孙"
+    if CONTROLS[palace_element] == branch_element:
+        return "妻财"
+    raise ValueError(f"无法计算六亲: {palace_element}, {branch_element}")
+
+
+def najia_for_line(lines: list[int], line_idx: int) -> str:
+    lower, upper = trigrams_from_lines(lines)
+    if line_idx < 3:
+        return TRIGRAM_NAJIA[lower]["inner"][line_idx]
+    return TRIGRAM_NAJIA[upper]["outer"][line_idx - 3]
+
+
+def hidden_spirits_for_lines(lines: list[int], palace: str, palace_element: str) -> dict[int, str]:
+    visible_relations = set()
+    for idx in range(6):
+        ganzi = najia_for_line(lines, idx)
+        visible_relations.add(six_relation(palace_element, ganzi_element(ganzi)))
+
+    palace_lines = list(TRIGRAM_LINES[palace]) + list(TRIGRAM_LINES[palace])
+    hidden = {}
+    for idx in range(6):
+        ganzi = najia_for_line(palace_lines, idx)
+        element = ganzi_element(ganzi)
+        relation = six_relation(palace_element, element)
+        if relation not in visible_relations:
+            hidden[idx] = f"{relation}{ganzi}{element}"
+    return hidden
+
+
+def line_symbol(kind: str) -> str:
+    return "yang" if kind == "阳" else "yin"
+
+
+def readable_bits(bits: str) -> str:
+    return " ".join("背" if bit == "1" else "字" for bit in bits)
+
+
+def build_chart_payload(records: list[YaoRecord], moment: datetime | None = None) -> dict[str, Any]:
+    time_info = ganzhi_context(moment)
+    ben_lines = line_bits_from_records(records, "ben")
+    bian_lines = line_bits_from_records(records, "bian")
+    ben_lower, ben_upper = trigrams_from_lines(ben_lines)
+    bian_lower, bian_upper = trigrams_from_lines(bian_lines)
+    palace, shi_idx, ying_idx = determine_palace(ben_lines)
+    bian_palace, _, _ = determine_palace(bian_lines)
+    palace_element = TRIGRAM_ELEMENTS[palace]
+    hidden_spirits = hidden_spirits_for_lines(ben_lines, palace, palace_element)
+    day_stem = time_info["pillars"]["day"][0]
+    spirit_start = SIX_SPIRIT_START_BY_DAY_STEM[day_stem]
+    spirits_bottom_to_top = [SIX_SPIRITS[(spirit_start + idx) % 6] for idx in range(6)]
+
+    rows_bottom_to_top = []
+    for idx, record in enumerate(records):
+        ben_ganzi = najia_for_line(ben_lines, idx)
+        ben_element = ganzi_element(ben_ganzi)
+        ben_relation = six_relation(palace_element, ben_element)
+        bian_ganzi = najia_for_line(bian_lines, idx)
+        bian_element = ganzi_element(bian_ganzi)
+        bian_relation = six_relation(palace_element, bian_element)
+        rows_bottom_to_top.append(
+            {
+                "yao": record.yao,
+                "yao_name": record.yao_name,
+                "position_label": "世" if idx == shi_idx else "应" if idx == ying_idx else "",
+                "six_spirit": spirits_bottom_to_top[idx],
+                "hidden_spirit": hidden_spirits.get(idx, ""),
+                "ben": {
+                    "relation": ben_relation,
+                    "ganzi": ben_ganzi,
+                    "element": ben_element,
+                    "text": f"{ben_relation}{ben_ganzi}{ben_element}",
+                    "line": line_symbol(record.ben),
+                },
+                "change_mark": "○→" if record.yao_type == "老阳" else "×→" if record.yao_type == "老阴" else "",
+                "bian": {
+                    "relation": bian_relation,
+                    "ganzi": bian_ganzi,
+                    "element": bian_element,
+                    "text": f"{bian_relation}{bian_ganzi}{bian_element}",
+                    "line": line_symbol(record.bian),
+                },
+                "quantum": {
+                    "bits": record.bits,
+                    "faces": readable_bits(record.bits),
+                    "backs": record.backs,
+                    "yao_type": record.yao_type,
+                },
+            }
+        )
+
+    return {
+        "time": time_info,
+        "ben": {
+            "palace": palace,
+            "name": HEXAGRAM_NAMES[(ben_upper, ben_lower)],
+            "upper": ben_upper,
+            "lower": ben_lower,
+            "palace_element": palace_element,
+        },
+        "bian": {
+            "palace": bian_palace,
+            "name": HEXAGRAM_NAMES[(bian_upper, bian_lower)],
+            "upper": bian_upper,
+            "lower": bian_lower,
+        },
+        "shi": shi_idx + 1,
+        "ying": ying_idx + 1,
+        "rows_bottom_to_top": rows_bottom_to_top,
+        "rows_top_to_bottom": list(reversed(rows_bottom_to_top)),
+    }
 
 
 def set_job(run_id: str, **updates: Any) -> None:
@@ -148,15 +695,101 @@ def map_bitstring_to_yao(bitstring: str, *, one_means_back: bool = True) -> dict
     return {"backs": 3, "symbol": "重", "yao_type": "老阳", "moving": True, "ben": "阳", "bian": "阴"}
 
 
+MANUAL_YAO_BITS = {
+    "old_yin": "000",
+    "laoyin": "000",
+    "老阴": "000",
+    "老陰": "000",
+    "交": "000",
+    "0": "000",
+    "young_yang": "001",
+    "shaoyang": "001",
+    "少阳": "001",
+    "少陽": "001",
+    "单": "001",
+    "單": "001",
+    "1": "001",
+    "young_yin": "110",
+    "shaoyin": "110",
+    "少阴": "110",
+    "少陰": "110",
+    "拆": "110",
+    "2": "110",
+    "old_yang": "111",
+    "laoyang": "111",
+    "老阳": "111",
+    "老陽": "111",
+    "重": "111",
+    "3": "111",
+}
+
+
+def normalize_manual_yao(value: Any) -> str:
+    if isinstance(value, dict):
+        value = value.get("value") or value.get("yao_type") or value.get("type") or value.get("bits")
+    text = str(value or "").strip()
+    if len(text) == 3 and all(ch in "01" for ch in text):
+        return text
+    if text in MANUAL_YAO_BITS:
+        return MANUAL_YAO_BITS[text]
+    raise ValueError(f"无法识别手动爻值: {text or value!r}")
+
+
+def records_from_manual_yaos(yaos: list[Any]) -> list[YaoRecord]:
+    if len(yaos) != 6:
+        raise ValueError("手动排盘需要自下而上输入 6 个爻。")
+
+    records = []
+    for idx, value in enumerate(yaos, start=1):
+        bits = normalize_manual_yao(value)
+        mapped = map_bitstring_to_yao(bits, one_means_back=True)
+        records.append(
+            YaoRecord(
+                yao=idx,
+                yao_name=YAO_NAMES[idx],
+                bits=bits,
+                backs=mapped["backs"],
+                symbol=mapped["symbol"],
+                yao_type=mapped["yao_type"],
+                moving=mapped["moving"],
+                ben=mapped["ben"],
+                bian=mapped["bian"],
+            )
+        )
+    return records
+
+
+def parse_cast_time(value: Any) -> datetime:
+    if value in (None, ""):
+        return datetime.now(cast_timezone())
+
+    text = str(value).strip()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"起卦时间格式不正确: {text}") from exc
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=cast_timezone())
+    return parsed.astimezone(cast_timezone())
+
+
 def ben_summary_label(record: YaoRecord) -> str:
     return record.yao_type if record.moving else record.ben
 
 
-def build_result_payload(records: list[YaoRecord], *, backend_name: str, job_id: str) -> dict[str, Any]:
+def build_result_payload(
+    records: list[YaoRecord],
+    *,
+    backend_name: str,
+    job_id: str,
+    moment: datetime | None = None,
+) -> dict[str, Any]:
     ben_gua = [r.ben for r in records]
     bian_gua = [r.bian for r in records]
     dong_yao = [r.yao for r in records if r.moving]
     dong_yao_detail = [f"{r.yao}={r.yao_type}" for r in records if r.moving]
+    chart = build_chart_payload(records, moment)
 
     return {
         "backend": backend_name,
@@ -174,6 +807,7 @@ def build_result_payload(records: list[YaoRecord], *, backend_name: str, job_id:
         "yao_types_bottom_to_top": [r.yao_type for r in records],
         "dong_yao": dong_yao,
         "dong_yao_detail": dong_yao_detail,
+        "chart": chart,
     }
 
 
@@ -192,6 +826,7 @@ def compact_result(payload: dict[str, Any]) -> dict[str, Any]:
         ],
         "dong_yao": payload["dong_yao"],
         "dong_yao_detail": payload["dong_yao_detail"],
+        "chart": payload["chart"],
     }
 
 
@@ -342,18 +977,34 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.serve_static(send_body=True):
             self.send_error(HTTPStatus.NOT_FOUND.value)
 
+    def read_json_body(self) -> dict[str, Any]:
+        content_length = int(self.headers.get("Content-Length", "0") or "0")
+        raw = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/api/manual-chart":
+            body = self.read_json_body()
+            try:
+                cast_time = parse_cast_time(body.get("cast_time"))
+                yaos = body.get("yaos") or []
+                records = records_from_manual_yaos(yaos)
+                payload = build_result_payload(records, backend_name="手动排盘", job_id="manual", moment=cast_time)
+            except ValueError as exc:
+                self.json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.json_response({"result": compact_result(payload)})
+            return
+
         if parsed.path != "/api/divinations":
             self.send_error(HTTPStatus.NOT_FOUND.value)
             return
 
-        content_length = int(self.headers.get("Content-Length", "0") or "0")
-        raw = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
-        try:
-            body = json.loads(raw)
-        except json.JSONDecodeError:
-            body = {}
+        body = self.read_json_body()
 
         backend_name = str(body.get("backend") or "").strip() or None
         run_id = uuid.uuid4().hex
