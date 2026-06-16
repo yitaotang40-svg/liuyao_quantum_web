@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>IBM Quantum 六爻起卦</title>
-    <link rel="stylesheet" href="./styles.css?v=10" />
+    <link rel="stylesheet" href="./styles.css?v=11" />
   </head>
   <body>
     <div class="quantum-scene" aria-hidden="true"></div>
@@ -168,13 +168,18 @@
               <span>历法</span>
               <select id="lifeCalendarType">
                 <option value="solar" selected>阳历 / 公历</option>
-                <option value="lunar">农历（请先换算成阳历）</option>
+                <option value="lunar">农历 / 阴历</option>
               </select>
             </label>
 
             <label class="field">
-              <span>阳历出生日期时间</span>
+              <span id="lifeBirthTimeLabel">出生日期时间</span>
               <input id="lifeBirthTime" type="datetime-local" />
+            </label>
+
+            <label class="check-field life-leap-field" id="lifeLeapField" hidden>
+              <input id="lifeLunarLeap" type="checkbox" />
+              <span>闰月</span>
             </label>
 
             <label class="field">
@@ -258,6 +263,6 @@
     </div>
 
     <script src="./config.js?v=2"></script>
-    <script src="./app.js?v=13"></script>
+    <script src="./app.js?v=14"></script>
   </body>
 </html>

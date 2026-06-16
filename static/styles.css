@@ -335,6 +335,22 @@ h1 {
   font-weight: 600;
 }
 
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.check-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--interactive);
+}
+
 select,
 input[type="text"],
 input[type="datetime-local"] {

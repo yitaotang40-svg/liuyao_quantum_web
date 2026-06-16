@@ -7,7 +7,10 @@ const manualSubmitButton = document.querySelector("#manualSubmitButton");
 const manualYaoSelects = document.querySelectorAll("[data-manual-yao]");
 const lifeName = document.querySelector("#lifeName");
 const lifeCalendarType = document.querySelector("#lifeCalendarType");
+const lifeBirthTimeLabel = document.querySelector("#lifeBirthTimeLabel");
 const lifeBirthTime = document.querySelector("#lifeBirthTime");
+const lifeLeapField = document.querySelector("#lifeLeapField");
+const lifeLunarLeap = document.querySelector("#lifeLunarLeap");
 const lifeGender = document.querySelector("#lifeGender");
 const lifeSubmitButton = document.querySelector("#lifeSubmitButton");
 const statusText = document.querySelector("#statusText");
@@ -379,10 +382,20 @@ function setLifeControls(busy) {
   lifeName.disabled = busy;
   lifeCalendarType.disabled = busy;
   lifeBirthTime.disabled = busy;
+  lifeLunarLeap.disabled = busy;
   lifeGender.disabled = busy;
   lifeSubmitButton.innerHTML = busy
     ? `<span class="button-mark" aria-hidden="true"></span><span>生成中</span>`
     : `<span class="button-mark life" aria-hidden="true"></span><span>生成人生K线</span>`;
+}
+
+function updateLifeCalendarFields() {
+  const isLunar = lifeCalendarType.value === "lunar";
+  lifeBirthTimeLabel.textContent = isLunar ? "农历出生日期时间" : "阳历出生日期时间";
+  lifeLeapField.hidden = !isLunar;
+  if (!isLunar) {
+    lifeLunarLeap.checked = false;
+  }
 }
 
 function setMode(mode) {
@@ -550,7 +563,7 @@ async function submitLifeKline() {
   }
 
   if (!lifeBirthTime.value) {
-    showWaitToast("请填写阳历出生日期时间");
+    showWaitToast(`请填写${lifeCalendarType.value === "lunar" ? "农历" : "阳历"}出生日期时间`);
     return;
   }
 
@@ -580,6 +593,7 @@ async function submitLifeKline() {
         name: lifeName.value,
         calendar_type: lifeCalendarType.value,
         birth_time: lifeBirthTime.value,
+        lunar_is_leap: lifeLunarLeap.checked,
         gender: lifeGender.value,
       }),
     });
@@ -625,6 +639,7 @@ modeButtons.forEach((button) => {
 
 manualSubmitButton.addEventListener("click", submitManualChart);
 lifeSubmitButton.addEventListener("click", submitLifeKline);
+lifeCalendarType.addEventListener("change", updateLifeCalendarFields);
 
 confirmCancel.addEventListener("click", (event) => {
   event.preventDefault();
@@ -669,7 +684,7 @@ resumeActiveJob().catch(() => {
 });
 
 manualDateTime.value = formatDateTimeLocal(new Date());
-lifeBirthTime.value = "2001-09-26T09:00";
+updateLifeCalendarFields();
 setManualControls(false);
 setLifeControls(false);
 setMode("quantum");

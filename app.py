@@ -22,6 +22,7 @@ from urllib.parse import unquote, urlparse
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
+from lunardate import LunarDate
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 from qiskit.transpiler import generate_preset_pass_manager
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
@@ -582,6 +583,12 @@ def life_dayun_info(moment: datetime, gender: str, year_pillar: str, month_pilla
     }
 
 
+def truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on", "闰", "闰月"}
+
+
 def parse_birth_time(value: Any) -> datetime:
     if value in (None, ""):
         raise ValueError("请填写出生日期时间。")
@@ -593,6 +600,53 @@ def parse_birth_time(value: Any) -> datetime:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=cast_timezone())
     return parsed.astimezone(cast_timezone())
+
+
+def normalize_life_calendar_type(value: Any) -> str:
+    text = str(value or "solar").strip().lower()
+    if text in {"solar", "gregorian", "yangli", "阳历", "公历"}:
+        return "solar"
+    if text in {"lunar", "yinli", "农历", "阴历"}:
+        return "lunar"
+    raise ValueError("历法只能选择阳历/公历或农历/阴历。")
+
+
+def resolve_life_birth_time(body: dict[str, Any]) -> tuple[datetime, dict[str, Any]]:
+    calendar_type = normalize_life_calendar_type(body.get("calendar_type"))
+    parsed = parse_birth_time(body.get("birth_time"))
+    local = parsed.astimezone(cast_timezone())
+    birth_input: dict[str, Any] = {
+        "inputCalendarType": calendar_type,
+        "inputBirthTime": local.isoformat(),
+    }
+    if calendar_type == "solar":
+        return local, birth_input
+
+    is_leap_month = truthy(body.get("lunar_is_leap"))
+    try:
+        solar_date = LunarDate(local.year, local.month, local.day, isLeapMonth=is_leap_month).toSolarDate()
+    except ValueError as exc:
+        leap_label = "闰" if is_leap_month else ""
+        raise ValueError(f"农历日期不正确：{local.year}年{leap_label}{local.month}月{local.day}日。") from exc
+
+    converted = datetime(
+        solar_date.year,
+        solar_date.month,
+        solar_date.day,
+        local.hour,
+        local.minute,
+        local.second,
+        local.microsecond,
+        tzinfo=cast_timezone(),
+    )
+    birth_input["lunar"] = {
+        "year": local.year,
+        "month": local.month,
+        "day": local.day,
+        "isLeapMonth": is_leap_month,
+    }
+    birth_input["solarBirthTime"] = converted.isoformat()
+    return converted, birth_input
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
@@ -730,11 +784,7 @@ def normalize_chart_points(points: Any, birth_year: int, dayun: dict[str, Any]) 
 
 
 def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
-    calendar_type = str(body.get("calendar_type") or "solar").strip().lower()
-    if calendar_type not in {"solar", "gregorian", "阳历", "公历"}:
-        raise ValueError("当前人生K线入口只接受阳历/公历日期；农历生日请先换算成阳历后再输入。")
-
-    birth_time = parse_birth_time(body.get("birth_time"))
+    birth_time, birth_input = resolve_life_birth_time(body)
     gender = normalized_gender(body.get("gender"))
     name = str(body.get("name") or "").strip()
     bazi_context = life_bazi_context(birth_time)
@@ -742,6 +792,15 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
     bazi = [pillars["year"], pillars["month"], pillars["day"], pillars["hour"]]
     dayun = life_dayun_info(birth_time, gender, pillars["year"], pillars["month"])
     local = birth_time.astimezone(cast_timezone())
+    if birth_input["inputCalendarType"] == "lunar":
+        lunar = birth_input["lunar"]
+        input_calendar_line = (
+            f"输入历法：农历，原始生日：{lunar['year']}年"
+            f"{'闰' if lunar['isLeapMonth'] else ''}{lunar['month']}月{lunar['day']}日 "
+            f"{local.hour:02d}:{local.minute:02d}；后端已换算为阳历 {local.strftime('%Y-%m-%d %H:%M')}"
+        )
+    else:
+        input_calendar_line = f"输入历法：阳历/公历，阳历生日：{local.strftime('%Y-%m-%d %H:%M')}"
 
     user_prompt = f"""
 请为以下用户生成一份人生K线命理 JSON。
@@ -749,6 +808,7 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
 【基本信息】
 姓名：{name or "未提供"}
 性别：{gender_label(gender)}
+{input_calendar_line}
 阳历出生时间：{local.strftime("%Y-%m-%d %H:%M")}（{bazi_context["timezone"]}）
 
 【后端已换算四柱】
@@ -780,8 +840,11 @@ chartPoints 的 year 从出生年份 {local.year} 开始，age 1 对应 {local.y
             "name": name,
             "gender": gender,
             "genderLabel": gender_label(gender),
-            "calendarType": "solar",
+            "calendarType": birth_input["inputCalendarType"],
+            "inputBirthTime": birth_input["inputBirthTime"],
             "birthTime": local.isoformat(),
+            "solarBirthTime": local.isoformat(),
+            "lunar": birth_input.get("lunar"),
             "bazi": bazi,
             "dayun": dayun,
         },
