@@ -59,6 +59,7 @@
           <div class="mode-switch" role="tablist" aria-label="起卦方式">
             <button class="mode-tab is-active" type="button" role="tab" aria-selected="true" data-mode="quantum">IBM 量子</button>
             <button class="mode-tab" type="button" role="tab" aria-selected="false" data-mode="manual">手动排盘</button>
+            <button class="mode-tab" type="button" role="tab" aria-selected="false" data-mode="life">人生K线</button>
           </div>
 
           <div class="mode-panel" data-mode-panel="quantum">
@@ -157,6 +158,44 @@
             </div>
           </div>
 
+          <div class="mode-panel life-panel" data-mode-panel="life" hidden>
+            <label class="field">
+              <span>姓名（可选）</span>
+              <input id="lifeName" type="text" autocomplete="name" placeholder="用于报告标题" />
+            </label>
+
+            <label class="field">
+              <span>历法</span>
+              <select id="lifeCalendarType">
+                <option value="solar" selected>阳历 / 公历</option>
+                <option value="lunar">农历（请先换算成阳历）</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>阳历出生日期时间</span>
+              <input id="lifeBirthTime" type="datetime-local" />
+            </label>
+
+            <label class="field">
+              <span>性别</span>
+              <select id="lifeGender">
+                <option value="male">乾造（男）</option>
+                <option value="female">坤造（女）</option>
+              </select>
+            </label>
+
+            <button id="lifeSubmitButton" type="button">
+              <span class="button-mark life" aria-hidden="true"></span>
+              <span>生成人生K线</span>
+            </button>
+
+            <div class="runtime-note life-note">
+              <span>后端 Gemini API</span>
+              <strong>密钥只读取服务器环境变量</strong>
+            </div>
+          </div>
+
           <dl class="status-list">
             <div>
               <dt>状态</dt>
@@ -219,6 +258,6 @@
     </div>
 
     <script src="./config.js?v=2"></script>
-    <script src="./app.js?v=12"></script>
+    <script src="./app.js?v=13"></script>
   </body>
 </html>

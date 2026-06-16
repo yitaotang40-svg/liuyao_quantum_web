@@ -6,6 +6,7 @@ import argparse
 import json
 import mimetypes
 import os
+import re
 import socket
 import threading
 import time
@@ -16,7 +17,9 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlparse
+from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
@@ -290,6 +293,45 @@ ACTIVE_STATUSES = {
     "READING_RESULT",
 }
 
+LIFE_KLINE_SYSTEM_INSTRUCTION = """
+你是一位严谨的八字命理分析师。请根据用户的阳历出生时间、性别、后端换算出的四柱干支和大运信息，生成“人生K线图”数据和命理报告。
+
+硬性规则：
+1. 只返回纯 JSON，不要 Markdown，不要解释文字。
+2. 生成 1-100 岁的 chartPoints，必须正好 100 条。
+3. 每条 chartPoints 都包含 age、year、ganZhi、daYun、open、close、high、low、score、reason。
+4. open/close/high/low/score 均为 0-100 数值；high >= open/close/low，low <= open/close/high。
+5. reason 控制在 20-35 个中文字符，简洁说明该年趋势。
+6. 分析分数字段使用 0-10 分。
+7. daYun 必须是大运干支或“童限”，不要把流年干支误填到 daYun。
+
+输出 JSON 结构：
+{
+  "bazi": ["年柱", "月柱", "日柱", "时柱"],
+  "summary": "命理总评",
+  "summaryScore": 8,
+  "personality": "性格分析",
+  "personalityScore": 8,
+  "industry": "事业行业分析",
+  "industryScore": 7,
+  "fengShui": "发展方位、城市环境、居住布局建议",
+  "fengShuiScore": 8,
+  "wealth": "财富分析",
+  "wealthScore": 8,
+  "marriage": "婚姻情感分析",
+  "marriageScore": 7,
+  "health": "健康分析",
+  "healthScore": 6,
+  "family": "六亲关系分析",
+  "familyScore": 7,
+  "crypto": "币圈/高波动交易运势分析",
+  "cryptoScore": 7,
+  "cryptoYear": "适合重点把握的流年",
+  "cryptoStyle": "现货定投/链上Alpha/高倍合约/不建议重仓",
+  "chartPoints": []
+}
+""".strip()
+
 
 @dataclass
 class YaoRecord:
@@ -448,6 +490,303 @@ def ganzhi_context(moment: datetime | None = None) -> dict[str, Any]:
         },
         "xunkong": xunkong_for_day(day_pillar),
         "shensha": shensha_for_day(day_pillar),
+    }
+
+
+def julian_day_number(year: int, month: int, day: int) -> int:
+    a = (14 - month) // 12
+    y = year + 4800 - a
+    m = month + 12 * a - 3
+    return day + ((153 * m + 2) // 5) + 365 * y + y // 4 - y // 100 + y // 400 - 32045
+
+
+def life_day_ganzhi(moment: datetime) -> str:
+    local = moment.astimezone(cast_timezone())
+    jdn = julian_day_number(local.year, local.month, local.day)
+    return GANZHI[(jdn + 49) % 60]
+
+
+def life_bazi_context(moment: datetime) -> dict[str, Any]:
+    local = moment.astimezone(cast_timezone())
+    year_pillar = year_ganzhi(local)
+    month_pillar = month_ganzhi(local, year_pillar)
+    day_pillar = life_day_ganzhi(local)
+    hour_pillar = hour_ganzhi(local, day_pillar)
+    return {
+        "timezone": str(cast_timezone()),
+        "iso": local.isoformat(),
+        "pillars": {
+            "year": year_pillar,
+            "month": month_pillar,
+            "day": day_pillar,
+            "hour": hour_pillar,
+        },
+    }
+
+
+def normalized_gender(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"male", "m", "男", "乾造", "乾"}:
+        return "male"
+    if text in {"female", "f", "女", "坤造", "坤"}:
+        return "female"
+    raise ValueError("请选择性别。")
+
+
+def gender_label(value: str) -> str:
+    return "男（乾造）" if value == "male" else "女（坤造）"
+
+
+def ganzhi_step(pillar: str, step: int) -> str:
+    return GANZHI[(GANZHI.index(pillar) + step) % 60]
+
+
+def dayun_direction(gender: str, year_pillar: str) -> tuple[bool, str]:
+    yang_stems = {"甲", "丙", "戊", "庚", "壬"}
+    is_yang_year = year_pillar[0] in yang_stems
+    is_forward = is_yang_year if gender == "male" else not is_yang_year
+    return is_forward, "顺行" if is_forward else "逆行"
+
+
+def jie_terms_around(moment: datetime) -> list[dict[str, Any]]:
+    tz = cast_timezone()
+    local = moment.astimezone(tz)
+    terms: list[dict[str, Any]] = []
+    for year in (local.year - 1, local.year, local.year + 1):
+        terms.extend(term for term in solar_terms_for_year(year, tz) if term["index"] in JIE_MONTH_INDEX)
+    return sorted(terms, key=lambda item: item["time"])
+
+
+def life_dayun_info(moment: datetime, gender: str, year_pillar: str, month_pillar: str) -> dict[str, Any]:
+    local = moment.astimezone(cast_timezone())
+    is_forward, direction = dayun_direction(gender, year_pillar)
+    terms = jie_terms_around(local)
+    previous_jie = max((term for term in terms if term["time"] <= local), key=lambda item: item["time"])
+    next_jie = min((term for term in terms if term["time"] > local), key=lambda item: item["time"])
+    target_jie = next_jie if is_forward else previous_jie
+    delta_days = abs((target_jie["time"] - local).total_seconds()) / 86400
+    actual_years = delta_days / 3
+    start_age = max(1, round(actual_years) + 1)
+    first_dayun = ganzhi_step(month_pillar, 1 if is_forward else -1)
+    sequence = [ganzhi_step(first_dayun, idx if is_forward else -idx) for idx in range(10)]
+    return {
+        "direction": direction,
+        "startAge": start_age,
+        "firstDaYun": first_dayun,
+        "sequence": sequence,
+        "referenceJie": {
+            "name": target_jie["name"],
+            "time": target_jie["time"].isoformat(),
+            "deltaDays": round(delta_days, 2),
+        },
+    }
+
+
+def parse_birth_time(value: Any) -> datetime:
+    if value in (None, ""):
+        raise ValueError("请填写出生日期时间。")
+    text = str(value).strip()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"出生日期时间格式不正确: {text}") from exc
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=cast_timezone())
+    return parsed.astimezone(cast_timezone())
+
+
+def extract_json_object(text: str) -> dict[str, Any]:
+    content = text.strip()
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)```", content)
+    if match:
+        content = match.group(1).strip()
+    else:
+        start = content.find("{")
+        end = content.rfind("}")
+        if start >= 0 and end > start:
+            content = content[start : end + 1]
+    return json.loads(content)
+
+
+def life_api_config() -> dict[str, Any]:
+    api_key = (
+        os.getenv("LIFE_KLINE_API_KEY")
+        or os.getenv("GEMINI_API_KEY")
+        or os.getenv("GOOGLE_API_KEY")
+        or ""
+    ).strip()
+    if not api_key:
+        raise RuntimeError("后端未配置 LIFE_KLINE_API_KEY 或 GEMINI_API_KEY。")
+    base_url = (os.getenv("LIFE_KLINE_API_BASE") or "https://generativelanguage.googleapis.com/v1beta/openai").strip().rstrip("/")
+    model = (os.getenv("LIFE_KLINE_MODEL") or "gemini-3.1-pro-preview").strip()
+    max_tokens = int(os.getenv("LIFE_KLINE_MAX_TOKENS", "30000"))
+    timeout = int(os.getenv("LIFE_KLINE_TIMEOUT", "180"))
+    return {"api_key": api_key, "base_url": base_url, "model": model, "max_tokens": max_tokens, "timeout": timeout}
+
+
+def call_life_model(messages: list[dict[str, str]]) -> dict[str, Any]:
+    config = life_api_config()
+    request_body = {
+        "model": config["model"],
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": config["max_tokens"],
+    }
+    request = Request(
+        f"{config['base_url']}/chat/completions",
+        data=json.dumps(request_body, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {config['api_key']}",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=config["timeout"]) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:1200]
+        raise RuntimeError(f"人生K线 API 请求失败: {exc.code} {detail}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"人生K线 API 无法连接: {exc.reason}") from exc
+
+    content = payload.get("choices", [{}])[0].get("message", {}).get("content")
+    if not content:
+        raise RuntimeError("人生K线模型未返回内容。")
+    return extract_json_object(content)
+
+
+def normalize_score(value: Any, default: int = 5) -> int | float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    if number.is_integer():
+        return int(number)
+    return round(number, 1)
+
+
+def normalize_life_analysis(data: dict[str, Any], bazi: list[str]) -> dict[str, Any]:
+    return {
+        "bazi": data.get("bazi") if isinstance(data.get("bazi"), list) else bazi,
+        "summary": data.get("summary") or "暂无总评",
+        "summaryScore": normalize_score(data.get("summaryScore")),
+        "personality": data.get("personality") or "暂无性格分析",
+        "personalityScore": normalize_score(data.get("personalityScore")),
+        "industry": data.get("industry") or "暂无事业分析",
+        "industryScore": normalize_score(data.get("industryScore")),
+        "fengShui": data.get("fengShui") or "暂无风水建议",
+        "fengShuiScore": normalize_score(data.get("fengShuiScore")),
+        "wealth": data.get("wealth") or "暂无财富分析",
+        "wealthScore": normalize_score(data.get("wealthScore")),
+        "marriage": data.get("marriage") or "暂无婚姻分析",
+        "marriageScore": normalize_score(data.get("marriageScore")),
+        "health": data.get("health") or "暂无健康分析",
+        "healthScore": normalize_score(data.get("healthScore")),
+        "family": data.get("family") or "暂无六亲分析",
+        "familyScore": normalize_score(data.get("familyScore")),
+        "crypto": data.get("crypto") or "暂无交易分析",
+        "cryptoScore": normalize_score(data.get("cryptoScore")),
+        "cryptoYear": data.get("cryptoYear") or "待定",
+        "cryptoStyle": data.get("cryptoStyle") or "稳健低杠杆",
+    }
+
+
+def normalize_chart_points(points: Any, birth_year: int, dayun: dict[str, Any]) -> list[dict[str, Any]]:
+    if not isinstance(points, list) or len(points) != 100:
+        raise RuntimeError("人生K线模型返回的数据不完整：chartPoints 必须正好 100 条。")
+    normalized = []
+    for idx, point in enumerate(points, start=1):
+        if not isinstance(point, dict):
+            raise RuntimeError(f"第 {idx} 条 chartPoints 不是对象。")
+        age = int(point.get("age") or idx)
+        year = int(point.get("year") or (birth_year + age - 1))
+        start_age = int(dayun["startAge"])
+        if age < start_age:
+            da_yun = "童限"
+        else:
+            da_yun_idx = min((age - start_age) // 10, len(dayun["sequence"]) - 1)
+            da_yun = point.get("daYun") or dayun["sequence"][da_yun_idx]
+        close = normalize_score(point.get("close") if point.get("close") is not None else point.get("score"), 50)
+        open_value = normalize_score(point.get("open"), close)
+        high = normalize_score(point.get("high"), max(open_value, close))
+        low = normalize_score(point.get("low"), min(open_value, close))
+        score = normalize_score(point.get("score"), close)
+        normalized.append(
+            {
+                "age": age,
+                "year": year,
+                "ganZhi": str(point.get("ganZhi") or GANZHI[(year - 1984) % 60]),
+                "daYun": str(da_yun),
+                "open": open_value,
+                "close": close,
+                "high": max(high, open_value, close, low),
+                "low": min(low, open_value, close, high),
+                "score": score,
+                "reason": str(point.get("reason") or "流年趋势平稳，宜稳中求进。"),
+            }
+        )
+    return normalized
+
+
+def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
+    calendar_type = str(body.get("calendar_type") or "solar").strip().lower()
+    if calendar_type not in {"solar", "gregorian", "阳历", "公历"}:
+        raise ValueError("当前人生K线入口只接受阳历/公历日期；农历生日请先换算成阳历后再输入。")
+
+    birth_time = parse_birth_time(body.get("birth_time"))
+    gender = normalized_gender(body.get("gender"))
+    name = str(body.get("name") or "").strip()
+    bazi_context = life_bazi_context(birth_time)
+    pillars = bazi_context["pillars"]
+    bazi = [pillars["year"], pillars["month"], pillars["day"], pillars["hour"]]
+    dayun = life_dayun_info(birth_time, gender, pillars["year"], pillars["month"])
+    local = birth_time.astimezone(cast_timezone())
+
+    user_prompt = f"""
+请为以下用户生成一份人生K线命理 JSON。
+
+【基本信息】
+姓名：{name or "未提供"}
+性别：{gender_label(gender)}
+阳历出生时间：{local.strftime("%Y-%m-%d %H:%M")}（{bazi_context["timezone"]}）
+
+【后端已换算四柱】
+年柱：{pillars["year"]}
+月柱：{pillars["month"]}
+日柱：{pillars["day"]}
+时柱：{pillars["hour"]}
+
+【后端已推算大运参数】
+大运方向：{dayun["direction"]}
+起运年龄（虚岁）：{dayun["startAge"]}
+第一步大运：{dayun["firstDaYun"]}
+大运序列：{"、".join(dayun["sequence"])}
+参考节气：{dayun["referenceJie"]["name"]}，相差约 {dayun["referenceJie"]["deltaDays"]} 天
+
+请严格使用上面的四柱、大运方向、起运年龄、第一步大运和大运序列。
+chartPoints 的 year 从出生年份 {local.year} 开始，age 1 对应 {local.year} 年。
+""".strip()
+    data = call_life_model(
+        [
+            {"role": "system", "content": LIFE_KLINE_SYSTEM_INSTRUCTION},
+            {"role": "user", "content": user_prompt},
+        ]
+    )
+    analysis = normalize_life_analysis(data, bazi)
+    chart_data = normalize_chart_points(data.get("chartPoints"), local.year, dayun)
+    return {
+        "birthInfo": {
+            "name": name,
+            "gender": gender,
+            "genderLabel": gender_label(gender),
+            "calendarType": "solar",
+            "birthTime": local.isoformat(),
+            "bazi": bazi,
+            "dayun": dayun,
+        },
+        "analysis": analysis,
+        "chartData": chart_data,
     }
 
 
@@ -998,6 +1337,19 @@ class Handler(SimpleHTTPRequestHandler):
                 self.json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
                 return
             self.json_response({"result": compact_result(payload)})
+            return
+
+        if parsed.path == "/api/life-kline":
+            body = self.read_json_body()
+            try:
+                result = generate_life_kline(body)
+            except ValueError as exc:
+                self.json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            except RuntimeError as exc:
+                self.json_response({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
+                return
+            self.json_response({"result": result})
             return
 
         if parsed.path != "/api/divinations":

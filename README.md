@@ -8,6 +8,12 @@
 手机/电脑浏览器 -> GitHub Pages 前端 -> 云端 Python 后端 -> IBM Quantum 真机
 ```
 
+人生 K 线入口也走同一个 Python 后端：
+
+```text
+浏览器输入阳历生日和性别 -> Python 后端换算四柱/大运 -> Gemini/OpenAI-compatible API -> 返回人生K线
+```
+
 ## 本地运行
 
 ```bash
@@ -27,6 +33,8 @@ http://127.0.0.1:8765
 - IBM Quantum API key 不在仓库里；本地后端会读取本机已保存的 Qiskit Runtime 账号。
 - 部署到云端时，把 `IBM_QUANTUM_API_KEY` 和 `IBM_QUANTUM_INSTANCE` 放到服务器环境变量里。
 - GitHub Pages 只能托管静态网页，不能直接运行 Qiskit/Python 后端；真机起卦必须有 Python 后端在运行。
+- 人生 K 线只接受阳历/公历出生日期时间；农历生日请先换算成阳历后再输入。
+- 人生 K 线 API key 不在前端出现；部署时把 `LIFE_KLINE_API_KEY` 放到服务器环境变量里。
 
 ## 云端部署
 
@@ -43,6 +51,9 @@ python app.py --host 0.0.0.0 --port $PORT
 IBM_QUANTUM_API_KEY=你的 IBM Quantum API key
 IBM_QUANTUM_INSTANCE=你的 IBM Quantum instance CRN
 IBM_QUANTUM_CHANNEL=ibm_quantum_platform
+LIFE_KLINE_API_KEY=你的 Gemini/OpenAI-compatible API key
+LIFE_KLINE_API_BASE=https://generativelanguage.googleapis.com/v1beta/openai
+LIFE_KLINE_MODEL=gemini-3.1-pro-preview
 ```
 
 4. 如果前端继续用 GitHub Pages，部署后把 `static/config.js` 里的 `window.LIUYAO_API_BASE` 改成你的后端 URL。
