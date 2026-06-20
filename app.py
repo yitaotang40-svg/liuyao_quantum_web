@@ -671,8 +671,8 @@ def life_api_config() -> dict[str, Any]:
     ).strip()
     if not api_key:
         raise RuntimeError("后端未配置 LIFE_KLINE_API_KEY 或 GEMINI_API_KEY。")
-    base_url = (os.getenv("LIFE_KLINE_API_BASE") or "https://generativelanguage.googleapis.com/v1beta/openai").strip().rstrip("/")
-    model = (os.getenv("LIFE_KLINE_MODEL") or "gemini-3.1-pro-preview").strip()
+    base_url = (os.getenv("LIFE_KLINE_API_BASE") or "https://bboluo.com/v1").strip().rstrip("/")
+    model = (os.getenv("LIFE_KLINE_MODEL") or "[L]gemini-3.1-pro-preview").strip()
     max_tokens = int(os.getenv("LIFE_KLINE_MAX_TOKENS", "30000"))
     timeout = int(os.getenv("LIFE_KLINE_TIMEOUT", "180"))
     return {"api_key": api_key, "base_url": base_url, "model": model, "max_tokens": max_tokens, "timeout": timeout}
