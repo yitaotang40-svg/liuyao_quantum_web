@@ -12,6 +12,7 @@ import socket
 import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
@@ -346,6 +347,61 @@ LIFE_KLINE_SYSTEM_INSTRUCTION = """
     {"age":1,"year":1990,"daYun":"童限","ganZhi":"庚午","open":50,"close":55,"high":60,"low":45,"score":55,"reason":"开局平稳，家庭助力较足"},
     "...共100条"
   ]
+}
+""".strip()
+
+LIFE_KLINE_CHART_CHUNK_INSTRUCTION = """
+你是一位严谨的八字命理分析师。请只为用户指定的年龄范围生成“人生K线”chartPoints。
+
+硬性规则：
+1. 只返回纯 JSON，不要 Markdown，不要解释文字。
+2. 只输出 chartPoints，不要输出命理报告。
+3. chartPoints 条数必须等于用户指定年龄范围的年数。
+4. K线 open/close/high/low/score 使用 0-100 分。
+5. 每条 reason 控制在 20-30 个中文字符，简洁说明当年吉凶趋势。
+6. daYun、year、ganZhi 必须严格按用户给定的年龄、流年和大运表填写。
+7. 数据要有明显起伏，体现大运、流年和人生阶段差异，禁止输出平滑直线。
+
+输出 JSON 结构：
+{
+  "chartPoints": [
+    {"age":1,"year":1990,"daYun":"童限","ganZhi":"庚午","open":50,"close":55,"high":60,"low":45,"score":55,"reason":"开局平稳，家庭助力较足"}
+  ]
+}
+""".strip()
+
+LIFE_KLINE_ANALYSIS_INSTRUCTION = """
+你是一位严谨的八字命理分析师。请根据用户的出生信息、后端换算出的四柱干支、大运信息和K线摘要，生成“人生K线”命理报告。
+
+硬性规则：
+1. 只返回纯 JSON，不要 Markdown，不要解释文字。
+2. 不要输出 chartPoints。
+3. 分析分数字段使用 0-10 分。
+4. 所有分析必须以“后端已换算四柱”和“后端已推算大运参数”为准，不要重新排四柱。
+
+输出 JSON 结构：
+{
+  "bazi": ["年柱", "月柱", "日柱", "时柱"],
+  "summary": "命理总评",
+  "summaryScore": 8,
+  "personality": "性格分析",
+  "personalityScore": 8,
+  "industry": "事业行业分析",
+  "industryScore": 7,
+  "fengShui": "发展方位、城市环境、居住布局建议",
+  "fengShuiScore": 8,
+  "wealth": "财富分析",
+  "wealthScore": 8,
+  "marriage": "婚姻情感分析",
+  "marriageScore": 7,
+  "health": "健康分析",
+  "healthScore": 6,
+  "family": "六亲关系分析",
+  "familyScore": 7,
+  "crypto": "币圈/高波动交易运势分析",
+  "cryptoScore": 7,
+  "cryptoYear": "适合重点把握的流年",
+  "cryptoStyle": "现货定投/链上Alpha/高倍合约/不建议重仓"
 }
 """.strip()
 
@@ -697,13 +753,19 @@ def life_api_config() -> dict[str, Any]:
     return {"api_key": api_key, "base_url": base_url, "model": model, "max_tokens": max_tokens, "timeout": timeout}
 
 
-def call_life_model(messages: list[dict[str, str]]) -> dict[str, Any]:
+def call_life_model(
+    messages: list[dict[str, str]],
+    *,
+    max_tokens: int | None = None,
+    timeout: int | None = None,
+    temperature: float = 0.7,
+) -> dict[str, Any]:
     config = life_api_config()
     request_body = {
         "model": config["model"],
         "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": config["max_tokens"],
+        "temperature": temperature,
+        "max_tokens": max_tokens or config["max_tokens"],
     }
     request = Request(
         f"{config['base_url']}/chat/completions",
@@ -715,7 +777,7 @@ def call_life_model(messages: list[dict[str, str]]) -> dict[str, Any]:
         method="POST",
     )
     try:
-        with urlopen(request, timeout=config["timeout"]) as response:
+        with urlopen(request, timeout=timeout or config["timeout"]) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:1200]
@@ -923,6 +985,121 @@ def normalize_chart_points(points: Any, birth_year: int, dayun: dict[str, Any]) 
     return normalized
 
 
+def normalize_chart_points_range(
+    points: Any,
+    birth_year: int,
+    dayun: dict[str, Any],
+    start_age: int,
+    end_age: int,
+) -> list[dict[str, Any]]:
+    expected_len = end_age - start_age + 1
+    if not isinstance(points, list) or len(points) != expected_len:
+        raise RuntimeError(f"人生K线模型返回的数据不完整：{start_age}-{end_age} 岁必须正好 {expected_len} 条。")
+    normalized = []
+    for offset, point in enumerate(points):
+        if not isinstance(point, dict):
+            raise RuntimeError(f"第 {start_age + offset} 岁 chartPoints 不是对象。")
+        age = start_age + offset
+        year = birth_year + age - 1
+        da_yun = dayun_for_age(age, dayun)
+        close = clamp_life_value(float(normalize_score(point.get("close") if point.get("close") is not None else point.get("score"), 50)))
+        open_value = clamp_life_value(float(normalize_score(point.get("open"), close)))
+        high = clamp_life_value(float(normalize_score(point.get("high"), max(open_value, close))))
+        low = clamp_life_value(float(normalize_score(point.get("low"), min(open_value, close))))
+        score = clamp_life_value(float(normalize_score(point.get("score"), close)))
+        normalized.append(
+            {
+                "age": age,
+                "year": year,
+                "ganZhi": GANZHI[(year - 1984) % 60],
+                "daYun": da_yun,
+                "open": open_value,
+                "close": close,
+                "high": max(high, open_value, close, low),
+                "low": min(low, open_value, close, high),
+                "score": score,
+                "reason": str(point.get("reason") or "流年趋势平稳，宜稳中求进。"),
+            }
+        )
+    return normalized
+
+
+def life_chart_rows_prompt(birth_year: int, dayun: dict[str, Any], start_age: int, end_age: int) -> str:
+    rows = []
+    for age in range(start_age, end_age + 1):
+        year = birth_year + age - 1
+        rows.append(f"{age}岁：{year}年，{GANZHI[(year - 1984) % 60]}，大运：{dayun_for_age(age, dayun)}")
+    return "\n".join(rows)
+
+
+def generate_model_chart_chunks(context_prompt: str, birth_year: int, dayun: dict[str, Any]) -> list[dict[str, Any]]:
+    chunk_ranges = [(1, 25), (26, 50), (51, 75), (76, 100)]
+    chunk_tokens = int(os.getenv("LIFE_KLINE_CHUNK_MAX_TOKENS", "9000"))
+    chunk_timeout = int(os.getenv("LIFE_KLINE_CHUNK_TIMEOUT", "75"))
+    chunk_workers = max(1, min(4, int(os.getenv("LIFE_KLINE_CHUNK_WORKERS", "4"))))
+
+    def fetch_chunk(start_age: int, end_age: int) -> tuple[int, list[dict[str, Any]]]:
+        chunk_prompt = f"""
+{context_prompt}
+
+【本批次只生成以下年龄范围】
+{life_chart_rows_prompt(birth_year, dayun, start_age, end_age)}
+
+请只输出上述 {start_age}-{end_age} 岁的 chartPoints JSON。
+不要输出其他年龄，不要输出报告字段。
+""".strip()
+        data = call_life_model(
+            [
+                {"role": "system", "content": LIFE_KLINE_CHART_CHUNK_INSTRUCTION},
+                {"role": "user", "content": chunk_prompt},
+            ],
+            max_tokens=chunk_tokens,
+            timeout=chunk_timeout,
+            temperature=0.65,
+        )
+        return start_age, normalize_chart_points_range(data.get("chartPoints"), birth_year, dayun, start_age, end_age)
+
+    chunks: dict[int, list[dict[str, Any]]] = {}
+    with ThreadPoolExecutor(max_workers=chunk_workers) as executor:
+        futures = [executor.submit(fetch_chunk, start_age, end_age) for start_age, end_age in chunk_ranges]
+        for future in as_completed(futures):
+            start_age, points = future.result()
+            chunks[start_age] = points
+
+    chart_data: list[dict[str, Any]] = []
+    for start_age, _ in chunk_ranges:
+        chart_data.extend(chunks[start_age])
+    return normalize_chart_points(chart_data, birth_year, dayun)
+
+
+def generate_model_analysis(context_prompt: str, bazi: list[str], chart_data: list[dict[str, Any]]) -> dict[str, Any]:
+    average = round(sum(float(point["score"]) for point in chart_data) / len(chart_data), 1)
+    peak = max(chart_data, key=lambda point: float(point["score"]))
+    trough = min(chart_data, key=lambda point: float(point["score"]))
+    analysis_tokens = int(os.getenv("LIFE_KLINE_ANALYSIS_MAX_TOKENS", "6000"))
+    analysis_timeout = int(os.getenv("LIFE_KLINE_ANALYSIS_TIMEOUT", "60"))
+    analysis_prompt = f"""
+{context_prompt}
+
+【模型已生成K线摘要】
+K线均值：{average}
+峰值流年：{peak["year"]}年 {peak["ganZhi"]}，{peak["age"]}岁，分数 {peak["score"]}
+低谷流年：{trough["year"]}年 {trough["ganZhi"]}，{trough["age"]}岁，分数 {trough["score"]}
+
+请只输出命理报告 JSON，不要输出 chartPoints。
+""".strip()
+    data = call_life_model(
+        [
+            {"role": "system", "content": LIFE_KLINE_ANALYSIS_INSTRUCTION},
+            {"role": "user", "content": analysis_prompt},
+        ],
+        max_tokens=analysis_tokens,
+        timeout=analysis_timeout,
+        temperature=0.7,
+    )
+    return normalize_life_analysis(data, bazi)
+
+
 def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
     birth_time, birth_input = resolve_life_birth_time(body)
     gender = normalized_gender(body.get("gender"))
@@ -932,7 +1109,8 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
     bazi = [pillars["year"], pillars["month"], pillars["day"], pillars["hour"]]
     dayun = life_dayun_info(birth_time, gender, pillars["year"], pillars["month"])
     local = birth_time.astimezone(cast_timezone())
-    chart_data = generate_backend_life_chart(local.year, bazi, dayun)
+    backend_chart_data = generate_backend_life_chart(local.year, bazi, dayun)
+    chart_data = backend_chart_data
     if birth_input["inputCalendarType"] == "lunar":
         lunar = birth_input["lunar"]
         input_calendar_line = (
@@ -943,9 +1121,7 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
     else:
         input_calendar_line = f"输入历法：阳历/公历，阳历生日：{local.strftime('%Y-%m-%d %H:%M')}"
 
-    user_prompt = f"""
-请为以下用户生成一份人生K线命理 JSON。
-
+    context_prompt = f"""
 【基本信息】
 姓名：{name or "未提供"}
 性别：{gender_label(gender)}
@@ -966,22 +1142,25 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
 参考节气：{dayun["referenceJie"]["name"]}，相差约 {dayun["referenceJie"]["deltaDays"]} 天
 
 请严格使用上面的四柱、大运方向、起运年龄、第一步大运和大运序列。
-请按官方人生K线结构输出完整 JSON，并生成 chartPoints 正好 100 条。
 chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1；ganZhi 必须对应该流年干支。
 """.strip()
     try:
-        data = call_life_model(
-            [
-                {"role": "system", "content": LIFE_KLINE_SYSTEM_INSTRUCTION},
-                {"role": "user", "content": user_prompt},
-            ]
-        )
-        chart_data = normalize_chart_points(data.get("chartPoints"), local.year, dayun)
-        analysis = normalize_life_analysis(data, bazi)
-        model_info = {"used": True, "error": None, "chartSource": "model"}
+        chart_data = generate_model_chart_chunks(context_prompt, local.year, dayun)
+        model_info = {"used": True, "error": None, "chartSource": "model", "method": "chunked"}
     except Exception as exc:
-        analysis = fallback_life_analysis(bazi, chart_data)
+        chart_data = backend_chart_data
         model_info = {"used": False, "error": str(exc)[:500], "chartSource": "backend_fallback"}
+    if model_info["chartSource"] == "model":
+        try:
+            analysis = generate_model_analysis(context_prompt, bazi, chart_data)
+            model_info["analysisSource"] = "model"
+        except Exception as exc:
+            analysis = fallback_life_analysis(bazi, chart_data)
+            model_info["analysisSource"] = "backend_fallback"
+            model_info["analysisError"] = str(exc)[:500]
+    else:
+        analysis = fallback_life_analysis(bazi, chart_data)
+        model_info["analysisSource"] = "backend_fallback"
     return {
         "birthInfo": {
             "name": name,
