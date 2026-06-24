@@ -313,6 +313,15 @@ function numericValue(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function lifePointPeakValue(point) {
+  return numericValue(point?.score, numericValue(point?.close, 0));
+}
+
+function isBetterLifePeak(point, best) {
+  if (!best) return true;
+  return lifePointPeakValue(point) > lifePointPeakValue(best);
+}
+
 const LIFE_CHART = {
   width: 1120,
   height: 430,
@@ -331,9 +340,9 @@ function lifeChartScale(points) {
   const lows = points.map((point) => numericValue(point.low, point.score));
   const rawMax = Math.max(100, ...highs);
   const rawMin = Math.min(0, ...lows);
-  const padding = Math.max(4, (rawMax - rawMin) * 0.05);
-  const maxValue = Math.min(120, Math.ceil((rawMax + padding) / 5) * 5);
-  const minValue = Math.max(-20, Math.floor((rawMin - padding) / 5) * 5);
+  const padding = Math.max(10, (rawMax - rawMin) * 0.1);
+  const maxValue = Math.min(125, Math.max(rawMax + 8, Math.ceil((rawMax + padding) / 5) * 5));
+  const minValue = Math.max(-25, Math.min(rawMin - 5, Math.floor((rawMin - padding) / 5) * 5));
   return { maxValue, minValue, spread: Math.max(1, maxValue - minValue) };
 }
 
@@ -569,7 +578,7 @@ function setupLifeChartInteraction(card, points, monthPoints = []) {
     return Math.round((rawX - LIFE_CHART.left) / step);
   };
   const peakIndex = points.reduce(
-    (bestIndex, point, index) => (numericValue(point.high) > numericValue(points[bestIndex]?.high) ? index : bestIndex),
+    (bestIndex, point, index) => (isBetterLifePeak(point, points[bestIndex]) ? index : bestIndex),
     0,
   );
 
@@ -677,6 +686,7 @@ function renderLifeKline(result) {
   const monthPoints = Array.isArray(result.monthChartData) ? result.monthChartData : [];
   const monthKline = result.monthKline || {};
   const model = result.model || {};
+  const engineVersion = result.engineVersion || model.engineVersion || "unknown-engine";
   const dayun = birth.dayun || {};
   const bazi = Array.isArray(birth.bazi) ? birth.bazi : analysis.bazi || [];
   const baziText = bazi.length ? bazi.map(escapeHtml).join("　") : "-";
@@ -695,7 +705,7 @@ function renderLifeKline(result) {
   const wealthHeadline = dayMaster.strengthLevel
     ? `${dayMaster.dayStem || ""}${dayMaster.dayElement || ""}${dayMaster.strengthLevel} · 财星${wealthProfile.wealthElement || "-"} · ${wealthProfile.wealthReadiness || "-"}`
     : "-";
-  const peak = points.reduce((best, point) => (numericValue(point.high) > numericValue(best?.high) ? point : best), null);
+  const peak = points.reduce((best, point) => (isBetterLifePeak(point, best) ? point : best), null);
   const first = points[0] || {};
   const last = points[points.length - 1] || {};
   const item = document.createElement("li");
@@ -762,7 +772,7 @@ function renderLifeKline(result) {
           <strong>${escapeHtml(relationSummary)}</strong>
         </div>
         <div>
-          <span>峰值</span>
+          <span>年度峰值</span>
           <strong>${peak ? `${escapeHtml(peak.year)}年 ${escapeHtml(peak.ganZhi)}，${escapeHtml(peak.age)}岁` : "-"}</strong>
         </div>
         <div class="life-selected-panel">
@@ -788,6 +798,7 @@ function renderLifeKline(result) {
       <span>暴富流年：${escapeHtml(analysis.cryptoYear || "待定")}</span>
       <span>交易风格：${escapeHtml(analysis.cryptoStyle || "稳健低杠杆")}</span>
       <span>${escapeHtml(model.deterministic === false ? "模型年线" : "年线确定性后端")}</span>
+      <span>算法：${escapeHtml(engineVersion)}</span>
       <span>${escapeHtml(monthKline.yearPreserving ? "月线聚合=年线" : "月线待校验")}</span>
     </div>
     <div class="life-analysis-grid">${renderLifeAnalysisCards(analysis)}</div>`;

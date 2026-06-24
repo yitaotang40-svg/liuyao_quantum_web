@@ -342,6 +342,7 @@ SIX_SPIRIT_START_BY_DAY_STEM = {
 
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
+LIFE_KLINE_ENGINE_VERSION = "wealth-v3.2-consistent-month-events"
 ACTIVE_STATUSES = {
     "CREATED",
     "CONNECTING",
@@ -2296,6 +2297,7 @@ chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1�
         "chartSource": "backend_deterministic",
         "method": "backend_formula",
         "deterministic": True,
+        "engineVersion": LIFE_KLINE_ENGINE_VERSION,
     }
     if allow_model_charts:
         try:
@@ -2332,6 +2334,7 @@ chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1�
         "chartData": chart_data,
         "monthChartData": month_chart_data,
         "monthKline": month_kline,
+        "engineVersion": LIFE_KLINE_ENGINE_VERSION,
         "model": model_info,
     }
 
@@ -2843,7 +2846,7 @@ class Handler(SimpleHTTPRequestHandler):
         path = unquote(parsed.path)
 
         if path == "/api/health":
-            self.json_response({"ok": True, "service": "liuyao_quantum_web"})
+            self.json_response({"ok": True, "service": "liuyao_quantum_web", "engineVersion": LIFE_KLINE_ENGINE_VERSION})
             return
 
         if path == "/api/active-job":
