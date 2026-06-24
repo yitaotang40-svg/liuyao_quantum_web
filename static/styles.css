@@ -1347,14 +1347,41 @@ dd {
 
 .life-month-row {
   display: grid;
-  gap: 5px;
+  gap: 7px;
   border-bottom: 1px solid #2a2e39;
-  padding: 10px 12px;
+  padding: 12px;
 }
 
-.life-month-row strong {
+.life-month-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.life-month-title strong {
   color: #f0f3fa;
   font-size: 13px;
+}
+
+.life-month-title small {
+  color: #787b86;
+  font: 11px var(--mono);
+}
+
+.life-month-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.life-month-tags span {
+  border: 1px solid #2a2e39;
+  border-radius: 3px;
+  background: #1b1f2a;
+  padding: 3px 7px;
+  color: #f0f3fa;
+  font: 700 11px var(--mono);
 }
 
 .life-month-row span,
@@ -1362,6 +1389,19 @@ dd {
   color: #b2b5be;
   font: 12px var(--mono);
   font-style: normal;
+}
+
+.life-month-meter {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #252a36;
+}
+
+.life-month-meter i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #22ab94, #2962ff);
 }
 
 .life-month-row p,

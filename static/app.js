@@ -326,15 +326,22 @@ function lifeAxisLabel(point) {
   return point.monthName || point.year || "-";
 }
 
+function lifeChartScale(points) {
+  const highs = points.map((point) => numericValue(point.high, point.score));
+  const lows = points.map((point) => numericValue(point.low, point.score));
+  const rawMax = Math.max(100, ...highs);
+  const rawMin = Math.min(0, ...lows);
+  const padding = Math.max(4, (rawMax - rawMin) * 0.05);
+  const maxValue = Math.min(120, Math.ceil((rawMax + padding) / 5) * 5);
+  const minValue = Math.max(-20, Math.floor((rawMin - padding) / 5) * 5);
+  return { maxValue, minValue, spread: Math.max(1, maxValue - minValue) };
+}
+
 function buildLifeChartSvg(points, options = {}) {
   const { width, height, left, right, top, bottom } = LIFE_CHART;
   const innerWidth = width - left - right;
   const innerHeight = height - top - bottom;
-  const highs = points.map((point) => numericValue(point.high, point.score));
-  const lows = points.map((point) => numericValue(point.low, point.score));
-  const maxValue = Math.max(100, ...highs);
-  const minValue = Math.min(0, ...lows);
-  const spread = Math.max(1, maxValue - minValue);
+  const { maxValue, spread } = lifeChartScale(points);
   const y = (value) => top + ((maxValue - value) / spread) * innerHeight;
   const step = innerWidth / Math.max(1, points.length - 1);
   const bodyWidth = Math.max(3, Math.min(points.length <= 24 ? 18 : 8, step * 0.58));
@@ -427,17 +434,31 @@ function buildLifeMonthList(monthPoints) {
     .map((point) => {
       const signals = Array.isArray(point.signals) && point.signals.length ? point.signals.join(" / ") : "少刑冲";
       const branchTenGods = Array.isArray(point.branchTenGods) && point.branchTenGods.length ? `藏干 ${point.branchTenGods.join("、")}` : "";
+      const likely = Array.isArray(point.likely) && point.likely.length ? point.likely.join("；") : point.opportunity || point.reason || "-";
+      const actions = Array.isArray(point.actionPlan) && point.actionPlan.length ? point.actionPlan.join("；") : point.advice || "观察节奏，等待触发";
+      const strength = Math.max(0, Math.min(100, numericValue(point.strengthPercent, 50)));
       return `
         <div class="life-month-row">
-          <strong>${escapeHtml(point.monthLabel || point.monthName || "-")}</strong>
-          <span>${escapeHtml(point.event || "平衡蓄势")} · ${escapeHtml(point.tenGod || "-")} · 月令${escapeHtml(point.seasonState || "-")} · 十二宫${escapeHtml(
+          <div class="life-month-title">
+            <strong>${escapeHtml(point.monthLabel || point.monthName || "-")}</strong>
+            <small>${escapeHtml(point.windowLabel || "")}</small>
+          </div>
+          <div class="life-month-tags">
+            <span>${escapeHtml(point.monthTone || point.event || "平衡蓄势")}</span>
+            <span>${escapeHtml(point.stance || "稳推进")}</span>
+            <span>${escapeHtml(point.triggerLevel || "蓄势观察")}</span>
+          </div>
+          <span>${escapeHtml(point.cashflow || point.event || "-")} · ${escapeHtml(point.tenGod || "-")} · 月令${escapeHtml(point.seasonState || "-")} · 十二宫${escapeHtml(
             point.growthState || "-",
           )}${branchTenGods ? ` · ${escapeHtml(branchTenGods)}` : ""}</span>
+          <div class="life-month-meter"><i style="width:${strength}%"></i></div>
           <em>O ${escapeHtml(point.open)} H ${escapeHtml(point.high)} L ${escapeHtml(point.low)} C ${escapeHtml(point.close)}</em>
-          <p><b>机会</b>${escapeHtml(point.opportunity || point.reason || "-")}</p>
-          <p><b>风险</b>${escapeHtml(point.risk || signals)}</p>
-          <p><b>操作</b>${escapeHtml(point.advice || "观察节奏，等待触发")}</p>
-          <p class="life-month-signals">${escapeHtml(signals)}</p>
+          <p><b>会发生</b>${escapeHtml(likely)}</p>
+          <p><b>钱来源</b>${escapeHtml(point.moneySource || point.opportunity || "-")}</p>
+          <p><b>风险点</b>${escapeHtml(point.riskFocus || point.risk || signals)}</p>
+          <p><b>怎么做</b>${escapeHtml(actions)}</p>
+          <p><b>时机</b>${escapeHtml(point.timing || "按节气月推进")}</p>
+          <p class="life-month-signals">${escapeHtml(point.why || signals)}</p>
         </div>`;
     })
     .join("");
@@ -479,11 +500,7 @@ function updateLifeSelection(card, points, index, lock = false, monthByYear = nu
   const innerHeight = height - top - bottom;
   const step = innerWidth / Math.max(1, points.length - 1);
   const x = left + safeIndex * step;
-  const highs = points.map((item) => numericValue(item.high, item.score));
-  const lows = points.map((item) => numericValue(item.low, item.score));
-  const maxValue = Math.max(100, ...highs);
-  const minValue = Math.min(0, ...lows);
-  const spread = Math.max(1, maxValue - minValue);
+  const { maxValue, spread } = lifeChartScale(points);
   const y = top + ((maxValue - numericValue(point.close, point.score)) / spread) * innerHeight;
   const labelX = Math.max(left + 32, Math.min(width - right - 32, x));
   const priceY = Math.max(top + 12, Math.min(height - bottom - 12, y));

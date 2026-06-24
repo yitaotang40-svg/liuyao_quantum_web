@@ -1622,10 +1622,183 @@ def flow_month_reason(month_pillar: str, influence: dict[str, Any]) -> str:
     return f"{month_pillar}{influence['event']}：{influence['opportunity']}；{signal_text}。"
 
 
+def term_date_label(term: dict[str, Any]) -> str:
+    try:
+        return datetime.fromisoformat(str(term["time"])).strftime("%m/%d")
+    except Exception:
+        return str(term.get("name") or "")
+
+
+def month_window_label(start_term: dict[str, Any], end_term: dict[str, Any]) -> str:
+    return f"{term_date_label(start_term)}-{term_date_label(end_term)}"
+
+
+def finance_trigger_level(score: float) -> str:
+    if score >= 13:
+        return "强触发"
+    if score >= 7:
+        return "中强触发"
+    if score >= 2:
+        return "温和触发"
+    if score >= -4:
+        return "蓄势观察"
+    return "风险触发"
+
+
+def month_trend_label(open_value: int, close: int, high: int, low: int) -> str:
+    delta = close - open_value
+    spread = high - low
+    if delta >= 8:
+        return "上行收涨"
+    if delta <= -8:
+        return "下行收跌"
+    if spread >= 18:
+        return "宽幅震荡"
+    return "窄幅整理"
+
+
+def month_signal_text(signals: list[str]) -> str:
+    return "、".join(signals[:3]) if signals else "少明显刑冲合会"
+
+
+def month_event_profile(
+    wealth_context: dict[str, Any],
+    month_pillar: str,
+    influence: dict[str, Any],
+    year_point: dict[str, Any],
+    open_value: int,
+    close: int,
+    high: int,
+    low: int,
+    start_term: dict[str, Any],
+    end_term: dict[str, Any],
+) -> dict[str, Any]:
+    day_profile = wealth_context["dayMaster"]
+    wealth_profile = wealth_context["wealth"]
+    event = str(influence["event"])
+    ten_god = str(influence["tenGod"])
+    branch_ten_gods = [str(item) for item in influence.get("branchTenGods", [])]
+    signals = [str(item) for item in influence.get("signals", [])]
+    score = float(influence["score"])
+    weak = day_profile["strengthLevel"] in WEAK_DAY_STATES
+    strong = day_profile["strengthLevel"] in HELPFUL_DAY_STATES
+    signal_text = month_signal_text(signals)
+
+    tone = "财务蓄势月"
+    cashflow = "整理现金流"
+    money_source = "准备工作、旧资源整理"
+    likely = ["财务节奏以观察和准备为主", "适合整理报价、合同、账目和客户线索"]
+    risk_focus = "机会触发不明显，强推容易低效"
+    action_plan = ["复盘账目和客户池", "把收款节点和成本表理清", "等财星或食伤月份再放大"]
+    avoid = "不要为了制造机会而重仓、借贷或乱承诺"
+
+    if event in {"财星引动", "财星藏支", "财星压身"}:
+        tone = "进财/收款月" if event != "财星压身" else "有财有压月"
+        cashflow = "回款与成交"
+        money_source = "客户付款、订单成交、销售佣金、副业收入或投资浮盈"
+        likely = ["回款、成交、报价、佣金或副业单子更容易出现", "钱的机会会变得更具体，适合把口头机会落到合同和账期"]
+        risk_focus = "财星压身" if weak else "偏财旺忌贪快，正财旺忌拖账"
+        action_plan = ["主动谈价格和收款", "把合同、发票、交付和账期写清楚", "能先收定金就不要只靠口头承诺"]
+        avoid = "不要把未到账的钱当现金花，也不要为了快钱加杠杆"
+    elif event in {"食伤生财", "输出蓄财"}:
+        tone = "输出变现月"
+        cashflow = "产品/内容/技术变现"
+        money_source = "作品、产品、流量、销售表达、技术服务或咨询交付"
+        likely = ["询盘、报价、上线、推广、成交转化会更活跃", "越能把技能产品化，越容易把流量或表达变成钱"]
+        risk_focus = "只忙输出不催款，或伤官太过冲规则"
+        action_plan = ["上线产品或服务", "主动报价并设置成交路径", "把交付范围和修改次数写清楚"]
+        avoid = "不要免费劳动过多，不要只做声量不做收款闭环"
+    elif event in {"比劫夺财", "暗比争财", "比劫助身"}:
+        tone = "竞争/分财月" if not weak else "团队助身月"
+        cashflow = "竞争、合伙与支出"
+        money_source = "团队资源、同业竞争、朋友客户介绍或合伙项目"
+        likely = ["同业竞争、价格战、合伙分钱或人情开销会变多", "客户归属、权限、账目和分成容易成为焦点"]
+        risk_focus = "被分利、被截胡、借钱担保、冲动消费"
+        action_plan = ["先定分成和权限", "重要客户自己跟进", "减少借贷担保和模糊合伙"]
+        avoid = "不要把账目交给别人凭感觉处理，也不要在人情压力下让利太多"
+    elif event in {"官杀管财", "规则伏财"}:
+        tone = "合同/合规月"
+        cashflow = "制度性收入"
+        money_source = "平台规则、职位责任、资质审批、正式合同或公司制度"
+        likely = ["合同、税务、平台规则、领导审批或资质会影响钱", "正规签约、入职晋升、项目立项、结算流程会变重要"]
+        risk_focus = "违约条款、税务、资质、审批慢或规则压力"
+        action_plan = ["审合同和税务口径", "把流程节点提前排好", "用正规凭证保护收入"]
+        avoid = "不要走灰色操作，也不要忽视平台规则和付款条件"
+    elif event == "印星护财":
+        tone = "资源护财月"
+        cashflow = "慢收益与防守"
+        money_source = "学习证照、贵人信息、系统工具、供应链或专业背书"
+        likely = ["短期未必立刻进账，但适合补资源、修系统、拿信息差", "花钱买工具、课程、资质或人脉的情况会变多"]
+        risk_focus = "投入见效慢，容易买资源但不变现"
+        action_plan = ["复盘流程和风控", "学习能直接变现的技能", "把资源转成报价、交付或渠道"]
+        avoid = "不要只学习不出货，也不要买太多暂时用不上的资源"
+    elif event == "财局/财库动":
+        tone = "财库/资产月"
+        cashflow = "旧账、资产与库存"
+        money_source = "应收款、尾款、库存、押金、长期项目、固定资产或沉淀资源"
+        likely = ["旧账、尾款、库存、押金或长期项目被引动", "适合处理资产盘点、回款催收和历史遗留账"]
+        risk_focus = "合冲并见时先动后稳，开库也可能伴随支出"
+        action_plan = ["查应收款和库存", "催尾款或重谈长期项目", "把资产、押金、账期做成清单"]
+        avoid = "不要只看表面收入，忽略同时出现的大额成本"
+
+    if any("财库被冲" in signal for signal in signals):
+        likely.append("财库被冲，旧账、押金、资产或大额支出会被翻出来")
+        risk_focus = f"{risk_focus}；财库被冲时要防开库变破库"
+        action_plan.append("单独检查大额支出、资产和应收款")
+    if any("三会" in signal or "三合" in signal for signal in signals):
+        likely.append("局势成气，相关事件会集中出现，不是零散小事")
+    if any("冲" in signal or "刑" in signal or "害" in signal for signal in signals):
+        risk_focus = f"{risk_focus}；{signal_text}带来波动"
+        avoid = f"{avoid}；冲刑害明显时避免临时加杠杆"
+
+    if strong and event in {"财星引动", "食伤生财", "财局/财库动"}:
+        action_plan.append("高确定性收入可以主动推进，但仍要先定退出条件")
+    if weak and event in {"财星引动", "财星藏支", "财星压身"}:
+        action_plan.append("先控规模，等印比或资源支撑到位再放大")
+
+    strength_percent = max(0, min(100, int(round(50 + score * 3.2))))
+    if close - open_value >= 8 and score >= 5:
+        stance = "可进攻"
+    elif score < -4 or close < open_value - 6:
+        stance = "防守控险"
+    elif "收款" in tone or event in {"财星引动", "财星藏支", "财局/财库动"}:
+        stance = "主收款"
+    else:
+        stance = "稳推进"
+
+    timing = (
+        f"{start_term.get('name', '节气')}后前段看天干{ten_god}，"
+        f"中后段看地支藏干{'、'.join(branch_ten_gods[:3]) or '本气'}"
+    )
+    why = (
+        f"{month_pillar}{ten_god}主事，日主{day_profile['strengthLevel']}，"
+        f"财星{wealth_profile['wealthElement']}，{signal_text}"
+    )
+    return {
+        "monthTone": tone,
+        "cashflow": cashflow,
+        "moneySource": money_source,
+        "likely": likely[:4],
+        "riskFocus": risk_focus,
+        "actionPlan": action_plan[:4],
+        "avoid": avoid,
+        "timing": timing,
+        "why": why,
+        "triggerLevel": finance_trigger_level(score),
+        "strengthPercent": strength_percent,
+        "stance": stance,
+        "trend": month_trend_label(open_value, close, high, low),
+        "windowLabel": month_window_label(start_term, end_term),
+        "yearBackdrop": f"{year_point['year']}年{year_point['ganZhi']}，大运{year_point['daYun']}，年主题{year_point.get('event', '财运起伏')}",
+    }
+
+
 def generate_months_for_year(year_point: dict[str, Any], bazi: list[str], wealth_context: dict[str, Any]) -> list[dict[str, Any]]:
     day_stem = bazi[2][0]
     month_pillars = flow_month_pillars(str(year_point["ganZhi"]))
     start_terms = flow_month_start_terms(int(year_point["year"]))
+    next_li_chun = solar_terms_for_year(int(year_point["year"]) + 1, cast_timezone())[2]
+    end_terms = start_terms[1:] + [{"name": next_li_chun["name"], "time": next_li_chun["time"].isoformat(), "monthName": "寅月"}]
     influences = [month_influence_score(day_stem, bazi, pillar, wealth_context) for pillar in month_pillars]
     raw_scores = [float(item["score"]) for item in influences]
     mean_score = sum(raw_scores) / len(raw_scores)
@@ -1654,6 +1827,18 @@ def generate_months_for_year(year_point: dict[str, Any], bazi: list[str], wealth
         cushion = max(1.0, min(8.0, abs(raw_score - mean_score) * 0.35 + float(influence.get("volatility", 4.0)) * 0.22))
         high = clamp_life_value(max(previous_close, close) + cushion, annual_low, annual_high)
         low = clamp_life_value(min(previous_close, close) - cushion, annual_low, annual_high)
+        event_profile = month_event_profile(
+            wealth_context,
+            month_pillar,
+            influence,
+            year_point,
+            previous_close,
+            close,
+            high,
+            low,
+            start_terms[index],
+            end_terms[index],
+        )
         rows.append(
             {
                 "age": year_point["age"],
@@ -1676,12 +1861,14 @@ def generate_months_for_year(year_point: dict[str, Any], bazi: list[str], wealth
                 "opportunity": influence["opportunity"],
                 "risk": influence["risk"],
                 "advice": influence["advice"],
+                "rawScore": round(raw_score, 2),
                 "open": previous_close,
                 "close": close,
                 "high": high,
                 "low": low,
                 "score": close,
-                "reason": flow_month_reason(month_pillar, influence),
+                "reason": f"{event_profile['monthTone']}：{event_profile['likely'][0]}；{event_profile['stance']}。",
+                **event_profile,
             }
         )
         previous_close = close
@@ -1773,7 +1960,7 @@ def generate_backend_life_chart(
         natal_base -= 8
     if "身强可任财" in wealth_profile["structures"]:
         natal_base += 5
-    previous_close = clamp_life_value(natal_base)
+    previous_close = clamp_life_value(natal_base, 4, 96)
     points: list[dict[str, Any]] = []
     for age in range(1, 101):
         year = birth_year + age - 1
@@ -1785,7 +1972,7 @@ def generate_backend_life_chart(
         flow_score = float(year_influence["score"])
         age_curve = -8 if age <= 16 else 2 if age <= 28 else 7 if age <= 48 else 5 if age <= 62 else 0 if age <= 78 else -5
         wave = math.sin((age + GANZHI.index(bazi[2])) / 5.2) * 3.5
-        close = clamp_life_value(natal_base + (dayun_score * 1.55) + (flow_score * 1.05) + age_curve + wave)
+        close = clamp_life_value(natal_base + (dayun_score * 1.55) + (flow_score * 1.05) + age_curve + wave, 4, 96)
         open_value = previous_close
         volatility = min(
             24,
