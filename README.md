@@ -53,7 +53,9 @@ IBM_QUANTUM_INSTANCE=你的 IBM Quantum instance CRN
 IBM_QUANTUM_CHANNEL=ibm_quantum_platform
 LIFE_KLINE_API_KEY=你的 Gemini/OpenAI-compatible API key
 LIFE_KLINE_API_BASE=https://bboluo.com/v1
-LIFE_KLINE_MODEL=[L]gemini-3.1-pro-preview
+LIFE_KLINE_MODEL=[L]gemini-3-flash-preview
+LIFE_KLINE_MAX_TOKENS=6000
+LIFE_KLINE_TIMEOUT=45
 ```
 
 4. 如果前端继续用 GitHub Pages，部署后把 `static/config.js` 里的 `window.LIUYAO_API_BASE` 改成你的后端 URL。
