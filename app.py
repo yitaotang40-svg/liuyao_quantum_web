@@ -675,7 +675,10 @@ def extract_json_object(text: str) -> dict[str, Any]:
         end = content.rfind("}")
         if start >= 0 and end > start:
             content = content[start : end + 1]
-    return json.loads(content)
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return json.loads(content, strict=False)
 
 
 def life_api_config() -> dict[str, Any]:
