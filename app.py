@@ -734,7 +734,13 @@ def extract_json_object(text: str) -> dict[str, Any]:
     try:
         return json.loads(content)
     except json.JSONDecodeError:
-        return json.loads(content, strict=False)
+        try:
+            return json.loads(content, strict=False)
+        except json.JSONDecodeError:
+            repaired = re.sub(r"}\s*{", "},{", content)
+            repaired = re.sub(r"]\s*\"", "],\"", repaired)
+            repaired = re.sub(r"\"\s*\"", "\",\"", repaired)
+            return json.loads(repaired, strict=False)
 
 
 def life_api_config() -> dict[str, Any]:
@@ -1037,9 +1043,10 @@ def generate_model_chart_chunks(context_prompt: str, birth_year: int, dayun: dic
     chunk_tokens = int(os.getenv("LIFE_KLINE_CHUNK_MAX_TOKENS", "9000"))
     chunk_timeout = int(os.getenv("LIFE_KLINE_CHUNK_TIMEOUT", "75"))
     chunk_workers = max(1, min(4, int(os.getenv("LIFE_KLINE_CHUNK_WORKERS", "4"))))
+    chunk_retries = max(1, int(os.getenv("LIFE_KLINE_CHUNK_RETRIES", "2")))
 
     def fetch_chunk(start_age: int, end_age: int) -> tuple[int, list[dict[str, Any]]]:
-        chunk_prompt = f"""
+        base_chunk_prompt = f"""
 {context_prompt}
 
 【本批次只生成以下年龄范围】
@@ -1047,17 +1054,25 @@ def generate_model_chart_chunks(context_prompt: str, birth_year: int, dayun: dic
 
 请只输出上述 {start_age}-{end_age} 岁的 chartPoints JSON。
 不要输出其他年龄，不要输出报告字段。
+必须是合法 JSON：对象之间必须有英文逗号，字符串内不要直接换行。
 """.strip()
-        data = call_life_model(
-            [
-                {"role": "system", "content": LIFE_KLINE_CHART_CHUNK_INSTRUCTION},
-                {"role": "user", "content": chunk_prompt},
-            ],
-            max_tokens=chunk_tokens,
-            timeout=chunk_timeout,
-            temperature=0.65,
-        )
-        return start_age, normalize_chart_points_range(data.get("chartPoints"), birth_year, dayun, start_age, end_age)
+        last_error: Exception | None = None
+        for attempt in range(1, chunk_retries + 1):
+            retry_line = "" if attempt == 1 else f"\n上一次第 {start_age}-{end_age} 岁 JSON 无效，请重新输出合法 JSON。"
+            try:
+                data = call_life_model(
+                    [
+                        {"role": "system", "content": LIFE_KLINE_CHART_CHUNK_INSTRUCTION},
+                        {"role": "user", "content": f"{base_chunk_prompt}{retry_line}"},
+                    ],
+                    max_tokens=chunk_tokens,
+                    timeout=chunk_timeout,
+                    temperature=0.65 if attempt == 1 else 0.35,
+                )
+                return start_age, normalize_chart_points_range(data.get("chartPoints"), birth_year, dayun, start_age, end_age)
+            except Exception as exc:
+                last_error = exc
+        raise RuntimeError(f"{start_age}-{end_age} 岁模型K线生成失败: {last_error}")
 
     chunks: dict[int, list[dict[str, Any]]] = {}
     with ThreadPoolExecutor(max_workers=chunk_workers) as executor:
