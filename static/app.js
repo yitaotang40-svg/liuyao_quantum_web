@@ -307,7 +307,7 @@ function buildLifeChartSvg(points) {
         <text class="life-price-label" x="${width - right + 31}" y="${top + 5}" text-anchor="middle"></text>
       </g>
       <g class="life-xaxis">${xTicks}</g>
-      <rect class="life-hit-area" x="${left}" y="${top}" width="${innerWidth}" height="${innerHeight}" />
+      <rect class="life-hit-area" x="${left}" y="${top}" width="${innerWidth}" height="${height - top}" />
     </svg>`;
 }
 
@@ -336,7 +336,12 @@ function updateLifeSelection(card, points, index, lock = false) {
   const innerHeight = height - top - bottom;
   const step = innerWidth / Math.max(1, points.length - 1);
   const x = left + safeIndex * step;
-  const y = top + ((100 - numericValue(point.close, point.score)) / 100) * innerHeight;
+  const highs = points.map((item) => numericValue(item.high, item.score));
+  const lows = points.map((item) => numericValue(item.low, item.score));
+  const maxValue = Math.max(100, ...highs);
+  const minValue = Math.min(0, ...lows);
+  const spread = Math.max(1, maxValue - minValue);
+  const y = top + ((maxValue - numericValue(point.close, point.score)) / spread) * innerHeight;
   const labelX = Math.max(left + 32, Math.min(width - right - 32, x));
   const priceY = Math.max(top + 12, Math.min(height - bottom - 12, y));
   const crosshair = card.querySelector("[data-life-crosshair]");
@@ -385,6 +390,7 @@ function setupLifeChartInteraction(card, points) {
   if (!points.length) return;
   const svg = card.querySelector(".life-chart-svg");
   const yearButtons = card.querySelectorAll("[data-life-year-index]");
+  if (!svg) return;
   const indexFromEvent = (event) => {
     const rect = svg.getBoundingClientRect();
     const rawX = ((event.clientX - rect.left) / rect.width) * LIFE_CHART.width;

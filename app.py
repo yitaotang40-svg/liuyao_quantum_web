@@ -308,13 +308,16 @@ ACTIVE_STATUSES = {
 }
 
 LIFE_KLINE_SYSTEM_INSTRUCTION = """
-你是一位严谨的八字命理分析师。请根据用户的阳历出生时间、性别、后端换算出的四柱干支和大运信息，生成“人生K线”命理报告。
+你是一位严谨的八字命理分析师，精通用四柱、大运、流年生成“人生K线”。请根据用户信息、后端换算出的四柱干支和大运参数，生成完整命理报告和 100 年 K 线数据。
 
 硬性规则：
 1. 只返回纯 JSON，不要 Markdown，不要解释文字。
-2. 不要生成 chartPoints，后端已经根据四柱、大运、流年生成 K 线数据。
-3. 分析分数字段使用 0-10 分。
-4. 所有分析必须以“后端已换算四柱”和“后端已推算大运参数”为准。
+2. 所有分析必须以“后端已换算四柱”和“后端已推算大运参数”为准，不要重新排四柱。
+3. 分析分数字段使用 0-10 分；K线 open/close/high/low/score 使用 0-100 分。
+4. chartPoints 必须正好 100 条，年龄采用虚岁，从 1 岁到 100 岁。
+5. 每条 chartPoints 的 reason 控制在 20-30 个中文字符，简洁说明当年吉凶趋势。
+6. 数据要有明显起伏，体现大运、流年和人生阶段差异，禁止输出平滑直线。
+7. daYun 必须严格按照用户提供的大运起运年龄和大运序列填写；起运前填“童限”。
 
 输出 JSON 结构：
 {
@@ -338,7 +341,11 @@ LIFE_KLINE_SYSTEM_INSTRUCTION = """
   "crypto": "币圈/高波动交易运势分析",
   "cryptoScore": 7,
   "cryptoYear": "适合重点把握的流年",
-  "cryptoStyle": "现货定投/链上Alpha/高倍合约/不建议重仓"
+  "cryptoStyle": "现货定投/链上Alpha/高倍合约/不建议重仓",
+  "chartPoints": [
+    {"age":1,"year":1990,"daYun":"童限","ganZhi":"庚午","open":50,"close":55,"high":60,"low":45,"score":55,"reason":"开局平稳，家庭助力较足"},
+    "...共100条"
+  ]
 }
 """.strip()
 
@@ -682,8 +689,8 @@ def life_api_config() -> dict[str, Any]:
         raise RuntimeError("后端未配置 LIFE_KLINE_API_KEY 或 GEMINI_API_KEY。")
     base_url = (os.getenv("LIFE_KLINE_API_BASE") or "https://bboluo.com/v1").strip().rstrip("/")
     model = (os.getenv("LIFE_KLINE_MODEL") or "[L]gemini-3-flash-preview").strip()
-    max_tokens = int(os.getenv("LIFE_KLINE_MAX_TOKENS", "6000"))
-    timeout = int(os.getenv("LIFE_KLINE_TIMEOUT", "45"))
+    max_tokens = int(os.getenv("LIFE_KLINE_MAX_TOKENS", "30000"))
+    timeout = int(os.getenv("LIFE_KLINE_TIMEOUT", "120"))
     return {"api_key": api_key, "base_url": base_url, "model": model, "max_tokens": max_tokens, "timeout": timeout}
 
 
@@ -883,24 +890,24 @@ def normalize_chart_points(points: Any, birth_year: int, dayun: dict[str, Any]) 
     for idx, point in enumerate(points, start=1):
         if not isinstance(point, dict):
             raise RuntimeError(f"第 {idx} 条 chartPoints 不是对象。")
-        age = int(point.get("age") or idx)
-        year = int(point.get("year") or (birth_year + age - 1))
+        age = idx
+        year = birth_year + age - 1
         start_age = int(dayun["startAge"])
         if age < start_age:
             da_yun = "童限"
         else:
             da_yun_idx = min((age - start_age) // 10, len(dayun["sequence"]) - 1)
-            da_yun = point.get("daYun") or dayun["sequence"][da_yun_idx]
-        close = normalize_score(point.get("close") if point.get("close") is not None else point.get("score"), 50)
-        open_value = normalize_score(point.get("open"), close)
-        high = normalize_score(point.get("high"), max(open_value, close))
-        low = normalize_score(point.get("low"), min(open_value, close))
-        score = normalize_score(point.get("score"), close)
+            da_yun = dayun["sequence"][da_yun_idx]
+        close = clamp_life_value(float(normalize_score(point.get("close") if point.get("close") is not None else point.get("score"), 50)))
+        open_value = clamp_life_value(float(normalize_score(point.get("open"), close)))
+        high = clamp_life_value(float(normalize_score(point.get("high"), max(open_value, close))))
+        low = clamp_life_value(float(normalize_score(point.get("low"), min(open_value, close))))
+        score = clamp_life_value(float(normalize_score(point.get("score"), close)))
         normalized.append(
             {
                 "age": age,
                 "year": year,
-                "ganZhi": str(point.get("ganZhi") or GANZHI[(year - 1984) % 60]),
+                "ganZhi": GANZHI[(year - 1984) % 60],
                 "daYun": str(da_yun),
                 "open": open_value,
                 "close": close,
@@ -923,9 +930,6 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
     dayun = life_dayun_info(birth_time, gender, pillars["year"], pillars["month"])
     local = birth_time.astimezone(cast_timezone())
     chart_data = generate_backend_life_chart(local.year, bazi, dayun)
-    peak = max(chart_data, key=lambda point: float(point["score"]))
-    trough = min(chart_data, key=lambda point: float(point["score"]))
-    average_score = round(sum(float(point["score"]) for point in chart_data) / len(chart_data), 1)
     if birth_input["inputCalendarType"] == "lunar":
         lunar = birth_input["lunar"]
         input_calendar_line = (
@@ -958,13 +962,9 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
 大运序列：{"、".join(dayun["sequence"])}
 参考节气：{dayun["referenceJie"]["name"]}，相差约 {dayun["referenceJie"]["deltaDays"]} 天
 
-【后端已生成K线摘要】
-K线均值：{average_score}
-峰值流年：{peak["year"]}年 {peak["ganZhi"]}，{peak["age"]}岁，分数 {peak["score"]}
-低谷流年：{trough["year"]}年 {trough["ganZhi"]}，{trough["age"]}岁，分数 {trough["score"]}
-
 请严格使用上面的四柱、大运方向、起运年龄、第一步大运和大运序列。
-不要输出 chartPoints，只输出命理报告 JSON。
+请按官方人生K线结构输出完整 JSON，并生成 chartPoints 正好 100 条。
+chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1；ganZhi 必须对应该流年干支。
 """.strip()
     try:
         data = call_life_model(
@@ -973,11 +973,12 @@ K线均值：{average_score}
                 {"role": "user", "content": user_prompt},
             ]
         )
+        chart_data = normalize_chart_points(data.get("chartPoints"), local.year, dayun)
         analysis = normalize_life_analysis(data, bazi)
-        model_info = {"used": True, "error": None}
+        model_info = {"used": True, "error": None, "chartSource": "model"}
     except Exception as exc:
         analysis = fallback_life_analysis(bazi, chart_data)
-        model_info = {"used": False, "error": str(exc)[:500]}
+        model_info = {"used": False, "error": str(exc)[:500], "chartSource": "backend_fallback"}
     return {
         "birthInfo": {
             "name": name,
