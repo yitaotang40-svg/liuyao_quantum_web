@@ -287,7 +287,33 @@ BRANCH_CLASH = {"子": "午", "午": "子", "丑": "未", "未": "丑", "寅": "
 BRANCH_COMBINE = {"子": "丑", "丑": "子", "寅": "亥", "亥": "寅", "卯": "戌", "戌": "卯", "辰": "酉", "酉": "辰", "巳": "申", "申": "巳", "午": "未", "未": "午"}
 BRANCH_HARM = {"子": "未", "未": "子", "丑": "午", "午": "丑", "寅": "巳", "巳": "寅", "卯": "辰", "辰": "卯", "申": "亥", "亥": "申", "酉": "戌", "戌": "酉"}
 BRANCH_TRINES = [("申子辰", "水"), ("亥卯未", "木"), ("寅午戌", "火"), ("巳酉丑", "金")]
+BRANCH_MEETINGS = [("寅卯辰", "木"), ("巳午未", "火"), ("申酉戌", "金"), ("亥子丑", "水")]
+STEM_COMBINES = {"甲": ("己", "土"), "己": ("甲", "土"), "乙": ("庚", "金"), "庚": ("乙", "金"), "丙": ("辛", "水"), "辛": ("丙", "水"), "丁": ("壬", "木"), "壬": ("丁", "木"), "戊": ("癸", "火"), "癸": ("戊", "火")}
+STEM_CLASH = {"甲": "庚", "庚": "甲", "乙": "辛", "辛": "乙", "壬": "丙", "丙": "壬", "癸": "丁", "丁": "癸"}
 NATAL_BRANCH_LABELS = ["年支", "月支", "日支", "时支"]
+PILLAR_LABELS = ["年柱", "月柱", "日柱", "时柱"]
+BRANCH_HIDDEN_STEMS = {
+    "子": [("癸", 1.0)],
+    "丑": [("己", 0.6), ("癸", 0.25), ("辛", 0.15)],
+    "寅": [("甲", 0.6), ("丙", 0.25), ("戊", 0.15)],
+    "卯": [("乙", 1.0)],
+    "辰": [("戊", 0.6), ("乙", 0.25), ("癸", 0.15)],
+    "巳": [("丙", 0.6), ("庚", 0.25), ("戊", 0.15)],
+    "午": [("丁", 0.7), ("己", 0.3)],
+    "未": [("己", 0.6), ("丁", 0.25), ("乙", 0.15)],
+    "申": [("庚", 0.6), ("壬", 0.25), ("戊", 0.15)],
+    "酉": [("辛", 1.0)],
+    "戌": [("戊", 0.6), ("辛", 0.25), ("丁", 0.15)],
+    "亥": [("壬", 0.7), ("甲", 0.3)],
+}
+ELEMENT_STORAGE_BRANCH = {"木": "未", "火": "戌", "土": "戌", "金": "丑", "水": "辰"}
+HELPFUL_DAY_STATES = {"旺", "强"}
+WEAK_DAY_STATES = {"衰", "弱"}
+WEALTH_TEN_GODS = {"正财", "偏财"}
+OUTPUT_TEN_GODS = {"食神", "伤官"}
+PEER_TEN_GODS = {"比肩", "劫财"}
+RESOURCE_TEN_GODS = {"正印", "偏印"}
+OFFICER_TEN_GODS = {"正官", "七杀"}
 GROWTH_STATES_BY_STEM = {
     "甲": dict(zip(list("亥子丑寅卯辰巳午未申酉戌"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
     "乙": dict(zip(list("午巳辰卯寅丑子亥戌酉申未"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
@@ -330,7 +356,7 @@ ACTIVE_STATUSES = {
 }
 
 LIFE_KLINE_SYSTEM_INSTRUCTION = """
-你是一位严谨的八字命理分析师，精通用四柱、大运、流年生成“人生K线”。请根据用户信息、后端换算出的四柱干支和大运参数，生成完整命理报告和 100 年 K 线数据。
+你是一位严谨的八字命理分析师，精通用四柱、大运、流年生成“财运K线”。请根据用户信息、后端换算出的四柱干支、大运参数和财运结构诊断，生成以财富、现金流、项目变现、投资风险为重点的完整命理报告和 100 年 K 线数据。
 
 硬性规则：
 1. 只返回纯 JSON，不要 Markdown，不要解释文字。
@@ -338,7 +364,7 @@ LIFE_KLINE_SYSTEM_INSTRUCTION = """
 3. 分析分数字段使用 0-10 分；K线 open/close/high/low/score 使用 0-100 分。
 4. chartPoints 必须正好 100 条，年龄采用虚岁，从 1 岁到 100 岁。
 5. 每条 chartPoints 的 reason 控制在 20-30 个中文字符，简洁说明当年吉凶趋势。
-6. 数据要有明显起伏，体现大运、流年和人生阶段差异，禁止输出平滑直线。
+6. 数据要有明显起伏，体现大运、流年、财星、食伤生财、比劫夺财、财库冲合和人生阶段差异，禁止输出平滑直线。
 7. daYun 必须严格按照用户提供的大运起运年龄和大运序列填写；起运前填“童限”。
 
 输出 JSON 结构：
@@ -352,7 +378,7 @@ LIFE_KLINE_SYSTEM_INSTRUCTION = """
   "industryScore": 7,
   "fengShui": "发展方位、城市环境、居住布局建议",
   "fengShuiScore": 8,
-  "wealth": "财富分析",
+  "wealth": "财富分析，必须说明能否任财、财星喜忌、主要赚钱方式和破财风险",
   "wealthScore": 8,
   "marriage": "婚姻情感分析",
   "marriageScore": 7,
@@ -372,7 +398,7 @@ LIFE_KLINE_SYSTEM_INSTRUCTION = """
 """.strip()
 
 LIFE_KLINE_CHART_CHUNK_INSTRUCTION = """
-你是一位严谨的八字命理分析师。请只为用户指定的年龄范围生成“人生K线”chartPoints。
+你是一位严谨的八字命理分析师。请只为用户指定的年龄范围生成“财运K线”chartPoints。
 
 硬性规则：
 1. 只返回纯 JSON，不要 Markdown，不要解释文字。
@@ -381,7 +407,7 @@ LIFE_KLINE_CHART_CHUNK_INSTRUCTION = """
 4. K线 open/close/high/low/score 使用 0-100 分。
 5. 每条 reason 控制在 20-30 个中文字符，简洁说明当年吉凶趋势。
 6. daYun、year、ganZhi 必须严格按用户给定的年龄、流年和大运表填写。
-7. 数据要有明显起伏，体现大运、流年和人生阶段差异，禁止输出平滑直线。
+7. 数据要有明显起伏，体现大运、流年、财星、食伤生财、比劫夺财、财库冲合和人生阶段差异，禁止输出平滑直线。
 
 输出 JSON 结构：
 {
@@ -392,7 +418,7 @@ LIFE_KLINE_CHART_CHUNK_INSTRUCTION = """
 """.strip()
 
 LIFE_KLINE_ANALYSIS_INSTRUCTION = """
-你是一位严谨的八字命理分析师。请根据用户的出生信息、后端换算出的四柱干支、大运信息和K线摘要，生成“人生K线”命理报告。
+你是一位严谨的八字命理分析师。请根据用户的出生信息、后端换算出的四柱干支、大运信息、财运结构诊断和K线摘要，生成以财运为重点的命理报告。
 
 硬性规则：
 1. 只返回纯 JSON，不要 Markdown，不要解释文字。
@@ -411,7 +437,7 @@ LIFE_KLINE_ANALYSIS_INSTRUCTION = """
   "industryScore": 7,
   "fengShui": "发展方位、城市环境、居住布局建议",
   "fengShuiScore": 8,
-  "wealth": "财富分析",
+  "wealth": "财富分析，必须说明能否任财、财星喜忌、主要赚钱方式和破财风险",
   "wealthScore": 8,
   "marriage": "婚姻情感分析",
   "marriageScore": 7,
@@ -919,6 +945,534 @@ def ten_god_category(ten_god: str) -> str:
     return "平衡：观察、蓄力"
 
 
+def element_relation_score(day_element: str, target_element: str) -> float:
+    if target_element == day_element:
+        return 7.0
+    if GENERATES[target_element] == day_element:
+        return 8.0
+    if GENERATES[day_element] == target_element:
+        return -4.0
+    if CONTROLS[day_element] == target_element:
+        return -5.5
+    if CONTROLS[target_element] == day_element:
+        return -7.0
+    return 0.0
+
+
+def day_master_profile(bazi: list[str]) -> dict[str, Any]:
+    day_stem = bazi[2][0]
+    day_element = STEM_ELEMENTS[day_stem]
+    month_branch = bazi[1][1]
+    month_state = element_season_state(day_element, month_branch)
+    score = {"旺": 34.0, "相": 22.0, "休": 6.0, "囚": -12.0, "死": -24.0}[month_state]
+    stem_weights = [0.8, 1.2, 0.0, 0.8]
+    branch_weights = [0.8, 1.45, 1.15, 0.85]
+    growth_scores = {
+        "长生": 12.0,
+        "沐浴": 0.0,
+        "冠带": 8.0,
+        "临官": 14.0,
+        "帝旺": 16.0,
+        "衰": -5.0,
+        "病": -8.0,
+        "死": -12.0,
+        "墓": 3.0,
+        "绝": -15.0,
+        "胎": 2.0,
+        "养": 4.0,
+    }
+    details: list[str] = [f"月令{month_branch}为日主{day_element}{month_state}"]
+    for index, pillar in enumerate(bazi):
+        if index != 2:
+            stem_element = STEM_ELEMENTS[pillar[0]]
+            score += element_relation_score(day_element, stem_element) * stem_weights[index]
+        branch = pillar[1]
+        growth = growth_state_for_stem(day_stem, branch)
+        score += growth_scores.get(growth, 0.0) * branch_weights[index] * 0.65
+        for hidden_stem, hidden_weight in BRANCH_HIDDEN_STEMS[branch]:
+            hidden_element = STEM_ELEMENTS[hidden_stem]
+            score += element_relation_score(day_element, hidden_element) * branch_weights[index] * hidden_weight
+    if score >= 60:
+        level = "旺"
+    elif score >= 28:
+        level = "强"
+    elif score >= 4:
+        level = "中和"
+    elif score >= -22:
+        level = "衰"
+    else:
+        level = "弱"
+    if level in HELPFUL_DAY_STATES:
+        useful = ["财星", "官杀", "食伤"]
+        avoid = ["比劫", "印星"]
+        strategy = "日主偏强，宜泄、宜克、宜用财官承接。"
+    elif level in WEAK_DAY_STATES:
+        useful = ["印星", "比劫"]
+        avoid = ["财星", "官杀", "食伤"]
+        strategy = "日主偏弱，先要印比扶身，再谈承财。"
+    else:
+        useful = ["财星", "官杀", "食伤", "印星"]
+        avoid = ["劫财过重"]
+        strategy = "日主中和，财官食伤可用，但忌一方过偏。"
+    return {
+        "dayStem": day_stem,
+        "dayElement": day_element,
+        "monthBranch": month_branch,
+        "monthState": month_state,
+        "strengthScore": round(score, 1),
+        "strengthLevel": level,
+        "usefulGroups": useful,
+        "avoidGroups": avoid,
+        "strategy": strategy,
+        "details": details,
+    }
+
+
+def ten_god_group(ten_god: str) -> str:
+    if ten_god in WEALTH_TEN_GODS:
+        return "财星"
+    if ten_god in OUTPUT_TEN_GODS:
+        return "食伤"
+    if ten_god in PEER_TEN_GODS:
+        return "比劫"
+    if ten_god in RESOURCE_TEN_GODS:
+        return "印星"
+    if ten_god in OFFICER_TEN_GODS:
+        return "官杀"
+    return "平衡"
+
+
+def pillar_ten_gods(day_stem: str, pillar: str) -> list[tuple[str, float, str]]:
+    stems = [(pillar[0], 1.0)] + BRANCH_HIDDEN_STEMS[pillar[1]]
+    return [(ten_god_for_stem(day_stem, stem), weight, stem) for stem, weight in stems]
+
+
+def bazi_ten_god_grid(bazi: list[str], day_profile: dict[str, Any]) -> list[dict[str, Any]]:
+    day_stem = day_profile["dayStem"]
+    day_element = day_profile["dayElement"]
+    rows: list[dict[str, Any]] = []
+    for index, pillar in enumerate(bazi):
+        branch = pillar[1]
+        hidden = [
+            {
+                "stem": hidden_stem,
+                "element": STEM_ELEMENTS[hidden_stem],
+                "tenGod": ten_god_for_stem(day_stem, hidden_stem),
+                "weight": hidden_weight,
+            }
+            for hidden_stem, hidden_weight in BRANCH_HIDDEN_STEMS[branch]
+        ]
+        rows.append(
+            {
+                "label": PILLAR_LABELS[index],
+                "pillar": pillar,
+                "stem": pillar[0],
+                "branch": branch,
+                "stemElement": STEM_ELEMENTS[pillar[0]],
+                "branchElement": BRANCH_ELEMENTS[branch],
+                "stemTenGod": "日主" if index == 2 else ten_god_for_stem(day_stem, pillar[0]),
+                "branchMainTenGod": hidden[0]["tenGod"],
+                "hiddenStems": hidden,
+                "growthState": growth_state_for_stem(day_stem, branch),
+                "seasonState": element_season_state(day_element, branch),
+            }
+        )
+    return rows
+
+
+def bazi_pattern_profile(bazi: list[str], day_profile: dict[str, Any]) -> dict[str, Any]:
+    day_stem = day_profile["dayStem"]
+    month_branch = bazi[1][1]
+    hidden = BRANCH_HIDDEN_STEMS[month_branch]
+    candidate_stems = [bazi[index][0] for index in (1, 0, 3)]
+    main_stem = hidden[0][0]
+    visible_hidden = [(stem, weight) for stem, weight in hidden if stem in candidate_stems]
+
+    if main_stem in candidate_stems:
+        selected_stem = main_stem
+        source = "月令本气透干取格"
+    elif len(hidden) == 1:
+        selected_stem = main_stem
+        source = "月令独藏本气取格"
+    elif visible_hidden:
+        selected_stem = max(visible_hidden, key=lambda item: item[1])[0]
+        source = "月令余气透干取格"
+    else:
+        selected_stem = max(hidden, key=lambda item: item[1])[0]
+        source = "月令藏干强弱取格"
+
+    ten_god = ten_god_for_stem(day_stem, selected_stem)
+    group = ten_god_group(ten_god)
+    if ten_god in PEER_TEN_GODS:
+        pattern_name = "建禄格" if month_branch == RILU_BY_STEM.get(day_stem) else "比劫变格"
+    elif ten_god == "七杀":
+        pattern_name = "七杀格"
+    else:
+        pattern_name = f"{ten_god}格"
+
+    visible_at = [PILLAR_LABELS[index] for index in (0, 1, 3) if bazi[index][0] == selected_stem]
+    if group in day_profile.get("usefulGroups", []):
+        quality = "格局落在喜用方向"
+    elif group in day_profile.get("avoidGroups", []):
+        quality = "格局落在忌神方向"
+    else:
+        quality = "格局需看全局扶抑"
+    return {
+        "monthBranch": month_branch,
+        "selectedStem": selected_stem,
+        "selectedElement": STEM_ELEMENTS[selected_stem],
+        "tenGod": ten_god,
+        "group": group,
+        "patternName": pattern_name,
+        "source": source,
+        "visibleAt": visible_at,
+        "quality": quality,
+    }
+
+
+def natal_relation_signals(bazi: list[str]) -> list[str]:
+    stems = [pillar[0] for pillar in bazi]
+    branches = [pillar[1] for pillar in bazi]
+    signals: list[str] = []
+    branch_set = set(branches)
+
+    for group_text, element in BRANCH_MEETINGS:
+        if set(group_text).issubset(branch_set):
+            signals.append(f"{group_text}三会{element}局")
+    for group_text, element in BRANCH_TRINES:
+        if set(group_text).issubset(branch_set):
+            signals.append(f"{group_text}三合{element}局")
+
+    labels = list("年月日时")
+    for left in range(4):
+        for right in range(left + 1, 4):
+            distance = "紧贴" if right - left == 1 else "隔位"
+            left_stem, right_stem = stems[left], stems[right]
+            combine_target = STEM_COMBINES.get(left_stem)
+            if combine_target and combine_target[0] == right_stem:
+                signals.append(f"{labels[left]}干{left_stem}{labels[right]}干{right_stem}合{combine_target[1]}（{distance}）")
+            if STEM_CLASH.get(left_stem) == right_stem:
+                signals.append(f"{labels[left]}干{left_stem}{labels[right]}干{right_stem}冲（{distance}）")
+
+            left_branch, right_branch = branches[left], branches[right]
+            if BRANCH_CLASH.get(left_branch) == right_branch:
+                signals.append(f"{labels[left]}支{left_branch}{labels[right]}支{right_branch}冲（{distance}）")
+            if BRANCH_COMBINE.get(left_branch) == right_branch:
+                signals.append(f"{labels[left]}支{left_branch}{labels[right]}支{right_branch}合（{distance}）")
+            if BRANCH_HARM.get(left_branch) == right_branch:
+                signals.append(f"{labels[left]}支{left_branch}{labels[right]}支{right_branch}害（{distance}）")
+            punishment = branch_punishment(left_branch, right_branch)
+            if punishment:
+                signals.append(f"{labels[left]}支{left_branch}{labels[right]}支{right_branch}{punishment}（{distance}）")
+    return signals[:18]
+
+
+def wealth_structure_profile(bazi: list[str], day_profile: dict[str, Any]) -> dict[str, Any]:
+    day_stem = day_profile["dayStem"]
+    day_element = day_profile["dayElement"]
+    wealth_element = CONTROLS[day_element]
+    wealth_storage = ELEMENT_STORAGE_BRANCH[wealth_element]
+    visible_wealth = 0.0
+    hidden_wealth = 0.0
+    output_power = 0.0
+    peer_power = 0.0
+    officer_power = 0.0
+    resource_power = 0.0
+    wealth_branches: list[str] = []
+    for index, pillar in enumerate(bazi):
+        stem_ten_god = ten_god_for_stem(day_stem, pillar[0])
+        if index != 2:
+            if stem_ten_god in WEALTH_TEN_GODS:
+                visible_wealth += 1.0
+            if stem_ten_god in OUTPUT_TEN_GODS:
+                output_power += 1.0
+            elif stem_ten_god in PEER_TEN_GODS:
+                peer_power += 1.0
+            elif stem_ten_god in OFFICER_TEN_GODS:
+                officer_power += 1.0
+            elif stem_ten_god in RESOURCE_TEN_GODS:
+                resource_power += 1.0
+        for hidden_stem, weight in BRANCH_HIDDEN_STEMS[pillar[1]]:
+            ten_god = ten_god_for_stem(day_stem, hidden_stem)
+            if ten_god in WEALTH_TEN_GODS:
+                hidden_wealth += weight
+                if pillar[1] not in wealth_branches:
+                    wealth_branches.append(pillar[1])
+            elif ten_god in OUTPUT_TEN_GODS:
+                output_power += weight
+            elif ten_god in PEER_TEN_GODS:
+                peer_power += weight
+            elif ten_god in OFFICER_TEN_GODS:
+                officer_power += weight
+            elif ten_god in RESOURCE_TEN_GODS:
+                resource_power += weight
+    wealth_power = visible_wealth * 1.4 + hidden_wealth
+    structures: list[str] = []
+    if visible_wealth:
+        structures.append("财星透干")
+    if hidden_wealth:
+        structures.append("财星藏支有根")
+    if output_power and wealth_power:
+        structures.append("食伤生财")
+    if officer_power and wealth_power:
+        structures.append("财官相生")
+    if wealth_storage in [pillar[1] for pillar in bazi]:
+        structures.append(f"命带{wealth_storage}财库")
+    if day_profile["strengthLevel"] in HELPFUL_DAY_STATES and wealth_power:
+        structures.append("身强可任财")
+    if day_profile["strengthLevel"] in WEAK_DAY_STATES and wealth_power >= 2.2:
+        structures.append("财多身弱")
+    if peer_power >= 2.6 and wealth_power:
+        structures.append("比劫分财")
+    if not structures:
+        structures.append("财星不显，重看岁运引动")
+    if day_profile["strengthLevel"] in HELPFUL_DAY_STATES:
+        wealth_favorability = 12 + min(10, wealth_power * 3) + min(6, output_power * 1.2) - min(8, peer_power * 1.1)
+        wealth_readiness = "能任财" if wealth_power else "待财星引动"
+    elif day_profile["strengthLevel"] in WEAK_DAY_STATES:
+        wealth_favorability = -8 + min(8, resource_power + peer_power) - min(10, wealth_power * 2.2)
+        wealth_readiness = "先扶身再取财"
+    else:
+        wealth_favorability = 6 + min(9, wealth_power * 2.2) + min(4, output_power) - min(6, peer_power)
+        wealth_readiness = "可取财但看平衡"
+    return {
+        "wealthElement": wealth_element,
+        "wealthStorageBranch": wealth_storage,
+        "visibleWealth": round(visible_wealth, 2),
+        "hiddenWealth": round(hidden_wealth, 2),
+        "wealthPower": round(wealth_power, 2),
+        "outputPower": round(output_power, 2),
+        "peerPower": round(peer_power, 2),
+        "officerPower": round(officer_power, 2),
+        "resourcePower": round(resource_power, 2),
+        "wealthBranches": wealth_branches,
+        "structures": structures,
+        "wealthFavorability": round(wealth_favorability, 1),
+        "wealthReadiness": wealth_readiness,
+    }
+
+
+def bazi_principle_notes(
+    day_profile: dict[str, Any],
+    pattern_profile: dict[str, Any],
+    relation_signals: list[str],
+    wealth_profile: dict[str, Any],
+) -> list[str]:
+    relation_text = "；".join(relation_signals[:4]) if relation_signals else "原局少明显刑冲合会"
+    return [
+        f"以日干为主：本命日主为{day_profile['dayStem']}{day_profile['dayElement']}，所有十神都围绕日主换算。",
+        f"以月令定旺衰：月令{day_profile['monthBranch']}令日主{day_profile['monthState']}，综合得令、得势、得地为{day_profile['strengthLevel']}。",
+        f"以月令藏干取格：{pattern_profile['source']}，格局暂取{pattern_profile['patternName']}，{pattern_profile['quality']}。",
+        f"以扶抑定喜忌：{day_profile['strategy']}喜用方向为{'、'.join(day_profile['usefulGroups'])}，忌偏重{'、'.join(day_profile['avoidGroups'])}。",
+        f"以刑冲合会看触发：{relation_text}。",
+        f"财运只是一条输出线：财为日主所克，财星{wealth_profile['wealthElement']}，须同时看日主能否任财、食伤能否生财、比劫是否分财、官印是否护财。",
+    ]
+
+
+def build_wealth_context(bazi: list[str]) -> dict[str, Any]:
+    day_profile = day_master_profile(bazi)
+    ten_gods = bazi_ten_god_grid(bazi, day_profile)
+    pattern_profile = bazi_pattern_profile(bazi, day_profile)
+    relation_signals = natal_relation_signals(bazi)
+    wealth_profile = wealth_structure_profile(bazi, day_profile)
+    return {
+        "dayMaster": day_profile,
+        "tenGods": ten_gods,
+        "pattern": pattern_profile,
+        "relations": relation_signals,
+        "principles": bazi_principle_notes(day_profile, pattern_profile, relation_signals, wealth_profile),
+        "wealth": wealth_profile,
+    }
+
+
+def group_is_useful(group: str, day_profile: dict[str, Any]) -> bool:
+    return group in day_profile.get("usefulGroups", [])
+
+
+def flow_wealth_score(day_profile: dict[str, Any], wealth_profile: dict[str, Any], ten_god: str) -> float:
+    group = ten_god_group(ten_god)
+    strong = day_profile["strengthLevel"] in HELPFUL_DAY_STATES
+    weak = day_profile["strengthLevel"] in WEAK_DAY_STATES
+    if strong:
+        scores = {"财星": 9.0, "食伤": 6.4, "官杀": 3.2, "印星": -4.5, "比劫": -7.0, "平衡": 0.0}
+    elif weak:
+        scores = {"印星": 7.2, "比劫": 4.8, "财星": -6.2, "食伤": -4.8, "官杀": -6.5, "平衡": 0.0}
+    else:
+        scores = {"财星": 7.0, "食伤": 5.0, "官杀": 3.0, "印星": 1.4, "比劫": -3.6, "平衡": 0.0}
+    score = scores.get(group, 0.0)
+    if ten_god == "偏财":
+        score += 1.0 if not weak else -0.8
+    if ten_god == "劫财" and wealth_profile["wealthPower"] > 0:
+        score -= 1.2
+    if ten_god in OUTPUT_TEN_GODS and wealth_profile["wealthPower"] > 0 and not weak:
+        score += 1.5
+    return score
+
+
+def wealth_flow_event(day_profile: dict[str, Any], wealth_profile: dict[str, Any], stem_ten_god: str, branch_ten_gods: list[str], signals: list[str]) -> dict[str, str]:
+    all_ten_gods = [stem_ten_god] + branch_ten_gods
+    strong = day_profile["strengthLevel"] in HELPFUL_DAY_STATES
+    weak = day_profile["strengthLevel"] in WEAK_DAY_STATES
+    if stem_ten_god in OUTPUT_TEN_GODS and any(ten_god in WEALTH_TEN_GODS for ten_god in branch_ten_gods):
+        return {
+            "event": "食伤生财",
+            "opportunity": "靠作品、表达、产品、流量转化为钱",
+            "risk": "输出过度会透支精力，伤官重忌冲规则",
+            "advice": "适合上线、推广、报价、做销售闭环",
+        }
+    if stem_ten_god in WEALTH_TEN_GODS:
+        if weak:
+            return {
+                "event": "财星压身",
+                "opportunity": "有钱财机会或回款消息",
+                "risk": "身弱承财吃力，易为钱劳心或现金流紧",
+                "advice": "先控仓位和成本，等印比月份再放大",
+            }
+        return {
+            "event": "财星引动",
+            "opportunity": "收入、成交、回款、投资机会增强",
+            "risk": "偏财旺时忌贪快，正财旺时忌拖账",
+            "advice": "主动谈钱、谈合同、收款落袋",
+        }
+    if stem_ten_god in OUTPUT_TEN_GODS:
+        return {
+            "event": "食伤生财",
+            "opportunity": "靠作品、表达、产品、流量转化为钱",
+            "risk": "输出过度会透支精力，伤官重忌冲规则",
+            "advice": "适合上线、推广、报价、做销售闭环",
+        }
+    if stem_ten_god in OFFICER_TEN_GODS:
+        return {
+            "event": "官杀管财",
+            "opportunity": "规则、职位、平台、资质带来稳定财源",
+            "risk": "税务、合规、合同压力上升",
+            "advice": "适合签正式协议，不适合灰色操作",
+        }
+    if stem_ten_god in RESOURCE_TEN_GODS:
+        return {
+            "event": "印星护财",
+            "opportunity": "学习、资质、贵人、信息差提供保护",
+            "risk": "短期收益慢，容易花钱买资源",
+            "advice": "适合复盘、学习、修系统，不急重仓",
+        }
+    if stem_ten_god in PEER_TEN_GODS:
+        if weak:
+            return {
+                "event": "比劫助身",
+                "opportunity": "朋友、团队、合伙资源能帮你扛事",
+                "risk": "账目不清仍会分利失控",
+                "advice": "合作可以，但分钱规则先写清楚",
+            }
+        return {
+            "event": "比劫夺财",
+            "opportunity": "适合竞争抢单或清理低效合伙",
+            "risk": "被分利、被截胡、冲动消费概率高",
+            "advice": "少借钱少担保，合同和权限收紧",
+        }
+    if any(ten_god in WEALTH_TEN_GODS for ten_god in branch_ten_gods):
+        if weak:
+            return {
+                "event": "财星藏支",
+                "opportunity": "暗处有回款、资源或副业机会",
+                "risk": "机会不在明面，先核成本和承压能力",
+                "advice": "适合查旧账、谈暗线资源、小步试单",
+            }
+        return {
+            "event": "财星藏支",
+            "opportunity": "暗处有回款、资源或副业机会",
+            "risk": "机会不在明面，忌冲动放大",
+            "advice": "适合查旧账、谈暗线资源、小步试单",
+        }
+    if any(ten_god in OUTPUT_TEN_GODS for ten_god in branch_ten_gods):
+        return {
+            "event": "输出蓄财",
+            "opportunity": "内容、产品、技能在暗处积累财源",
+            "risk": "短期回款不一定立刻出现",
+            "advice": "适合打磨交付、报价体系和销售材料",
+        }
+    if any(ten_god in OFFICER_TEN_GODS for ten_god in branch_ten_gods):
+        return {
+            "event": "规则伏财",
+            "opportunity": "资质、合同、平台规则暗中影响收入",
+            "risk": "细则、税务、违约条款容易卡现金流",
+            "advice": "适合审合同和流程，不急冒进",
+        }
+    if any(ten_god in PEER_TEN_GODS for ten_god in branch_ten_gods):
+        return {
+            "event": "暗比争财",
+            "opportunity": "竞争关系会逼出效率或新单",
+            "risk": "暗处竞争、分利、团队内耗",
+            "advice": "权限、账目、客户归属要清楚",
+        }
+    if any("财库" in signal or "三合" in signal or "三会" in signal for signal in signals):
+        return {
+            "event": "财局/财库动",
+            "opportunity": "隐藏资源、库存、旧账或长期项目被引动",
+            "risk": "合冲并见时先动后稳",
+            "advice": "查旧账、查资产、查应收款",
+        }
+    return {
+        "event": "平衡蓄势",
+        "opportunity": "财务节奏平稳，可做准备工作",
+        "risk": "缺少明显财星触发，强行推进效率低",
+        "advice": "整理账目、观察机会、等待触发",
+    }
+
+
+def flow_wealth_influence(bazi: list[str], wealth_context: dict[str, Any], flow_pillar: str) -> dict[str, Any]:
+    day_profile = wealth_context["dayMaster"]
+    wealth_profile = wealth_context["wealth"]
+    day_stem = day_profile["dayStem"]
+    flow_stem, flow_branch = flow_pillar[0], flow_pillar[1]
+    stem_ten_god = ten_god_for_stem(day_stem, flow_stem)
+    hidden = [(ten_god_for_stem(day_stem, stem), weight, stem) for stem, weight in BRANCH_HIDDEN_STEMS[flow_branch]]
+    branch_ten_gods = [item[0] for item in hidden]
+    score = flow_wealth_score(day_profile, wealth_profile, stem_ten_god)
+    for ten_god, weight, _stem in hidden:
+        score += flow_wealth_score(day_profile, wealth_profile, ten_god) * weight * 0.62
+    signals = branch_relation_signals(flow_branch, bazi)
+    wealth_element = wealth_profile["wealthElement"]
+    storage_branch = wealth_profile["wealthStorageBranch"]
+    for signal in signals:
+        if f"三会{wealth_element}局" in signal:
+            score += 9.0
+        elif f"三合{wealth_element}局" in signal:
+            score += 7.5
+        elif f"半会{wealth_element}" in signal:
+            score += 3.8
+        elif f"半合{wealth_element}" in signal:
+            score += 3.2
+        elif signal.endswith("合"):
+            score += 2.0
+        elif signal.endswith("冲"):
+            score -= 2.2
+        elif signal.endswith("害"):
+            score -= 1.3
+        elif signal.endswith("刑") or signal.endswith("自刑"):
+            score -= 1.0
+    if flow_branch == storage_branch:
+        score += 2.4
+        signals.append(f"{storage_branch}财库临月")
+    if BRANCH_CLASH.get(flow_branch) == storage_branch:
+        score += 1.4 if day_profile["strengthLevel"] not in WEAK_DAY_STATES else -1.8
+        signals.append(f"{storage_branch}财库被冲")
+    event = wealth_flow_event(day_profile, wealth_profile, stem_ten_god, branch_ten_gods, signals)
+    volatility = 4.0 + abs(score) * 0.55
+    if any("冲" in signal or "刑" in signal or "害" in signal for signal in signals):
+        volatility += 2.4
+    if stem_ten_god == "偏财":
+        volatility += 1.6
+    return {
+        "score": round(score, 2),
+        "volatility": round(volatility, 2),
+        "tenGod": stem_ten_god,
+        "branchTenGods": branch_ten_gods,
+        "category": ten_god_category(stem_ten_god),
+        "signals": signals[:8],
+        **event,
+    }
+
+
 def season_for_branch(branch: str) -> str:
     if branch in "寅卯":
         return "春"
@@ -969,6 +1523,16 @@ def branch_trine_signals(month_branch: str, bazi: list[str]) -> list[str]:
     natal_branches = [pillar[1] for pillar in bazi]
     branch_set = set(natal_branches + [month_branch])
     signals: list[str] = []
+    for group_text, element in BRANCH_MEETINGS:
+        group = set(group_text)
+        if month_branch not in group:
+            continue
+        if group.issubset(branch_set):
+            signals.append(f"{group_text}三会{element}局")
+            continue
+        hits = sorted((branch for branch in group.intersection(natal_branches) if branch != month_branch), key=group_text.index)
+        if hits:
+            signals.append(f"{month_branch}{hits[0]}半会{element}")
     for group_text, element in BRANCH_TRINES:
         group = set(group_text)
         if month_branch not in group:
@@ -976,7 +1540,7 @@ def branch_trine_signals(month_branch: str, bazi: list[str]) -> list[str]:
         if group.issubset(branch_set):
             signals.append(f"{group_text}三合{element}局")
             continue
-        hits = sorted(group.intersection(natal_branches), key=group_text.index)
+        hits = sorted((branch for branch in group.intersection(natal_branches) if branch != month_branch), key=group_text.index)
         if hits:
             signals.append(f"{month_branch}{hits[0]}半合{element}")
     return signals
@@ -1020,68 +1584,50 @@ def flow_month_start_terms(year: int) -> list[dict[str, Any]]:
     return terms
 
 
-def month_influence_score(day_stem: str, bazi: list[str], month_pillar: str) -> tuple[float, str, str, str, str, list[str]]:
+def month_influence_score(
+    day_stem: str,
+    bazi: list[str],
+    month_pillar: str,
+    wealth_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     day_element = STEM_ELEMENTS[day_stem]
     month_stem, month_branch = month_pillar[0], month_pillar[1]
     ten_god = ten_god_for_stem(day_stem, month_stem)
     season_state = element_season_state(day_element, month_branch)
     growth_state = growth_state_for_stem(day_stem, month_branch)
-    score = pillar_element_score(day_element, month_pillar, 0.9, 1.1)
-    score += {"旺": 4.0, "相": 2.2, "休": 0.2, "囚": -2.4, "死": -4.0}[season_state]
-    score += {
-        "长生": 2.0,
-        "沐浴": 0.4,
-        "冠带": 1.0,
-        "临官": 2.4,
-        "帝旺": 3.0,
-        "衰": -0.8,
-        "病": -1.6,
-        "死": -2.4,
-        "墓": -0.8,
-        "绝": -3.0,
-        "胎": 0.8,
-        "养": 1.0,
+    if wealth_context is None:
+        wealth_context = build_wealth_context(bazi)
+    influence = flow_wealth_influence(bazi, wealth_context, month_pillar)
+    season_adjust = {"旺": 1.6, "相": 0.8, "休": 0.0, "囚": -0.7, "死": -1.2}[season_state]
+    growth_adjust = {
+        "长生": 1.0,
+        "冠带": 0.6,
+        "临官": 1.2,
+        "帝旺": 1.4,
+        "衰": -0.5,
+        "病": -0.8,
+        "死": -1.0,
+        "绝": -1.4,
+        "胎": 0.4,
+        "养": 0.5,
     }.get(growth_state, 0)
-    score += {
-        "正印": 1.4,
-        "偏印": 1.0,
-        "食神": 1.8,
-        "伤官": 1.0,
-        "正财": 2.6,
-        "偏财": 2.2,
-        "正官": 1.4,
-        "七杀": 0.5,
-        "比肩": -0.4,
-        "劫财": -1.1,
-    }.get(ten_god, 0)
-    signals = branch_relation_signals(month_branch, bazi)
-    for signal in signals:
-        if "三合" in signal:
-            score += 2.4
-        elif "半合" in signal:
-            score += 1.0
-        elif signal.endswith("合"):
-            score += 1.8
-        elif signal.endswith("冲"):
-            score -= 2.6
-        elif signal.endswith("害"):
-            score -= 1.6
-        elif signal.endswith("刑") or signal.endswith("自刑"):
-            score -= 1.2
-    return score, ten_god, ten_god_category(ten_god), season_state, growth_state, signals
+    influence["score"] = round(float(influence["score"]) + season_adjust + growth_adjust, 2)
+    influence["seasonState"] = season_state
+    influence["growthState"] = growth_state
+    return influence
 
 
-def flow_month_reason(month_pillar: str, ten_god: str, season_state: str, growth_state: str, signals: list[str]) -> str:
-    signal_text = "、".join(signals[:2]) if signals else "少刑冲"
-    return f"{month_pillar}{ten_god}主事，日主{season_state}，十二宫{growth_state}，{signal_text}。"
+def flow_month_reason(month_pillar: str, influence: dict[str, Any]) -> str:
+    signal_text = "、".join(influence.get("signals", [])[:2]) if influence.get("signals") else "少刑冲"
+    return f"{month_pillar}{influence['event']}：{influence['opportunity']}；{signal_text}。"
 
 
-def generate_months_for_year(year_point: dict[str, Any], bazi: list[str]) -> list[dict[str, Any]]:
+def generate_months_for_year(year_point: dict[str, Any], bazi: list[str], wealth_context: dict[str, Any]) -> list[dict[str, Any]]:
     day_stem = bazi[2][0]
     month_pillars = flow_month_pillars(str(year_point["ganZhi"]))
     start_terms = flow_month_start_terms(int(year_point["year"]))
-    influences = [month_influence_score(day_stem, bazi, pillar) for pillar in month_pillars]
-    raw_scores = [item[0] for item in influences]
+    influences = [month_influence_score(day_stem, bazi, pillar, wealth_context) for pillar in month_pillars]
+    raw_scores = [float(item["score"]) for item in influences]
     mean_score = sum(raw_scores) / len(raw_scores)
     centered = [score - mean_score for score in raw_scores]
     max_abs = max(1.0, max(abs(value) for value in centered))
@@ -1103,8 +1649,9 @@ def generate_months_for_year(year_point: dict[str, Any], bazi: list[str]) -> lis
     previous_close = annual_open
     for index, close in enumerate(closes):
         month_pillar = month_pillars[index]
-        raw_score, ten_god, category, season_state, growth_state, signals = influences[index]
-        cushion = max(1.0, min(6.0, abs(raw_score - mean_score) * 0.35 + 1.5))
+        influence = influences[index]
+        raw_score = float(influence["score"])
+        cushion = max(1.0, min(8.0, abs(raw_score - mean_score) * 0.35 + float(influence.get("volatility", 4.0)) * 0.22))
         high = clamp_life_value(max(previous_close, close) + cushion, annual_low, annual_high)
         low = clamp_life_value(min(previous_close, close) - cushion, annual_low, annual_high)
         rows.append(
@@ -1119,17 +1666,22 @@ def generate_months_for_year(year_point: dict[str, Any], bazi: list[str]) -> lis
                 "monthLabel": f"{FLOW_MONTH_NAMES[index]} {month_pillar}",
                 "ganZhi": month_pillar,
                 "startTerm": start_terms[index],
-                "tenGod": ten_god,
-                "category": category,
-                "seasonState": season_state,
-                "growthState": growth_state,
-                "signals": signals,
+                "tenGod": influence["tenGod"],
+                "branchTenGods": influence.get("branchTenGods", []),
+                "category": influence["category"],
+                "seasonState": influence["seasonState"],
+                "growthState": influence["growthState"],
+                "signals": influence.get("signals", []),
+                "event": influence["event"],
+                "opportunity": influence["opportunity"],
+                "risk": influence["risk"],
+                "advice": influence["advice"],
                 "open": previous_close,
                 "close": close,
                 "high": high,
                 "low": low,
                 "score": close,
-                "reason": flow_month_reason(month_pillar, ten_god, season_state, growth_state, signals),
+                "reason": flow_month_reason(month_pillar, influence),
             }
         )
         previous_close = close
@@ -1150,13 +1702,17 @@ def aggregate_months_to_year(months: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
-def generate_month_life_chart(chart_data: list[dict[str, Any]], bazi: list[str]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def generate_month_life_chart(
+    chart_data: list[dict[str, Any]],
+    bazi: list[str],
+    wealth_context: dict[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     month_data: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
     all_match = True
     sample_ages = {1, 7, 14, 25, 35, len(chart_data)}
     for point in chart_data:
-        months = generate_months_for_year(point, bazi)
+        months = generate_months_for_year(point, bazi, wealth_context)
         month_data.extend(months)
         aggregate = aggregate_months_to_year(months)
         expected = {key: int(point[key]) for key in ("open", "close", "high", "low")}
@@ -1165,7 +1721,7 @@ def generate_month_life_chart(chart_data: list[dict[str, Any]], bazi: list[str])
         if int(point["age"]) in sample_ages:
             checks.append({"year": point["year"], "age": point["age"], "expected": expected, "aggregate": aggregate, "matches": matches})
     return month_data, {
-        "basis": "节气流月、日干十神、月令旺衰、寄生十二宫、刑冲害合与三合；月K由年K边界约束生成",
+        "basis": "以日主强弱、用神喜忌、财星状态为底；流月看财星、食伤生财、比劫夺财、官杀管财、印星护财、财库与三会三合刑冲；月K由财运年K边界约束生成",
         "monthsPerYear": 12,
         "yearPreserving": all_match,
         "sampleChecks": checks,
@@ -1186,29 +1742,58 @@ def life_reason(score: int, delta: int, age: int, gan_zhi: str, da_yun: str) -> 
     return f"{gan_zhi}压力较显，宜慢决策少做重仓。"
 
 
+def life_wealth_reason(year_influence: dict[str, Any], dayun_influence: dict[str, Any] | None, score: int) -> str:
+    dayun_event = dayun_influence["event"] if dayun_influence else "童限蓄势"
+    event = year_influence["event"]
+    if score >= 82:
+        tone = "财机强"
+    elif score >= 66:
+        tone = "可进取"
+    elif score >= 50:
+        tone = "宜稳做"
+    else:
+        tone = "要控险"
+    return f"{dayun_event}遇{event}，{tone}：{year_influence['advice']}"
+
+
 def generate_backend_life_chart(
     birth_year: int,
     bazi: list[str],
     dayun: dict[str, Any],
+    wealth_context: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    day_element = STEM_ELEMENTS.get(bazi[2][0], BRANCH_ELEMENTS.get(bazi[2][1], "土"))
-    natal_base = 50
-    natal_base += pillar_element_score(day_element, bazi[0], 0.5, 0.6)
-    natal_base += pillar_element_score(day_element, bazi[1], 0.8, 1.1)
-    natal_base += pillar_element_score(day_element, bazi[3], 0.4, 0.5)
+    day_profile = wealth_context["dayMaster"]
+    wealth_profile = wealth_context["wealth"]
+    natal_base = 52 + float(wealth_profile["wealthFavorability"])
+    if "食伤生财" in wealth_profile["structures"]:
+        natal_base += 4
+    if "比劫分财" in wealth_profile["structures"]:
+        natal_base -= 5
+    if "财多身弱" in wealth_profile["structures"]:
+        natal_base -= 8
+    if "身强可任财" in wealth_profile["structures"]:
+        natal_base += 5
     previous_close = clamp_life_value(natal_base)
     points: list[dict[str, Any]] = []
     for age in range(1, 101):
         year = birth_year + age - 1
         gan_zhi = GANZHI[(year - 1984) % 60]
         da_yun = dayun_for_age(age, dayun)
-        flow_score = pillar_element_score(day_element, gan_zhi, 0.9, 1.0)
-        luck_score = 0 if da_yun == "童限" else pillar_element_score(day_element, da_yun, 1.1, 1.3)
-        age_curve = -7 if age <= 15 else 4 if age <= 35 else 9 if age <= 55 else 2 if age <= 75 else -5
-        wave = math.sin((age + GANZHI.index(bazi[2])) / 4.8) * 6
-        close = clamp_life_value(natal_base + (luck_score * 1.25) + flow_score + age_curve + wave)
+        year_influence = flow_wealth_influence(bazi, wealth_context, gan_zhi)
+        dayun_influence = None if da_yun == "童限" else flow_wealth_influence(bazi, wealth_context, da_yun)
+        dayun_score = 0.0 if dayun_influence is None else float(dayun_influence["score"])
+        flow_score = float(year_influence["score"])
+        age_curve = -8 if age <= 16 else 2 if age <= 28 else 7 if age <= 48 else 5 if age <= 62 else 0 if age <= 78 else -5
+        wave = math.sin((age + GANZHI.index(bazi[2])) / 5.2) * 3.5
+        close = clamp_life_value(natal_base + (dayun_score * 1.55) + (flow_score * 1.05) + age_curve + wave)
         open_value = previous_close
-        volatility = min(18, 5 + abs(close - open_value) * 0.35 + abs(flow_score) * 0.25)
+        volatility = min(
+            24,
+            5
+            + abs(close - open_value) * 0.32
+            + float(year_influence.get("volatility", 4.0)) * 0.55
+            + (0 if dayun_influence is None else float(dayun_influence.get("volatility", 4.0)) * 0.22),
+        )
         high = clamp_life_value(max(open_value, close) + volatility)
         low = clamp_life_value(min(open_value, close) - (volatility * 0.8))
         points.append(
@@ -1222,21 +1807,39 @@ def generate_backend_life_chart(
                 "high": max(high, open_value, close, low),
                 "low": min(low, open_value, close, high),
                 "score": close,
-                "reason": life_reason(close, close - open_value, age, gan_zhi, da_yun),
+                "event": year_influence["event"],
+                "opportunity": year_influence["opportunity"],
+                "risk": year_influence["risk"],
+                "advice": year_influence["advice"],
+                "reason": life_wealth_reason(year_influence, dayun_influence, close),
             }
         )
         previous_close = close
     return points
 
 
-def fallback_life_analysis(bazi: list[str], chart_data: list[dict[str, Any]]) -> dict[str, Any]:
+def fallback_life_analysis(
+    bazi: list[str],
+    chart_data: list[dict[str, Any]],
+    wealth_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     average = round(sum(float(point["score"]) for point in chart_data) / len(chart_data), 1)
     peak = max(chart_data, key=lambda point: float(point["score"]))
     low = min(chart_data, key=lambda point: float(point["score"]))
     score_10 = max(1, min(10, round(average / 10, 1)))
+    if wealth_context is None:
+        wealth_context = build_wealth_context(bazi)
+    wealth_profile = wealth_context["wealth"]
+    day_profile = wealth_context["dayMaster"]
+    wealth_text = (
+        f"财运结构为{'、'.join(wealth_profile['structures'])}。"
+        f"日主{day_profile['strengthLevel']}，{day_profile['strategy']}"
+        f"财星五行为{wealth_profile['wealthElement']}，财库在{wealth_profile['wealthStorageBranch']}，"
+        f"高分年份宜主动收款、成交和变现，低分年份重点防比劫分财、财多压身或合同成本。"
+    )
     return {
         "bazi": bazi,
-        "summary": f"后端已完成四柱和大运排盘。基础K线均值约{average}，峰值在{peak['year']}年，低谷在{low['year']}年。",
+        "summary": f"后端已完成四柱、大运和财运结构诊断。财运K线均值约{average}，峰值在{peak['year']}年，低谷在{low['year']}年。",
         "summaryScore": score_10,
         "personality": "命局节奏以日主为核心，宜把稳定积累和阶段性突破结合。",
         "personalityScore": score_10,
@@ -1244,7 +1847,7 @@ def fallback_life_analysis(bazi: list[str], chart_data: list[dict[str, Any]]) ->
         "industryScore": score_10,
         "fengShui": "居住与办公宜保持采光、通风和动线清晰，重要年份少频繁搬动。",
         "fengShuiScore": score_10,
-        "wealth": "财富曲线宜顺势分批推进，高分阶段可进取，低分阶段重现金流。",
+        "wealth": wealth_text,
         "wealthScore": score_10,
         "marriage": "关系经营宜避开事业压力峰值时的冲动决策，多以沟通稳定节奏。",
         "marriageScore": score_10,
@@ -1252,7 +1855,7 @@ def fallback_life_analysis(bazi: list[str], chart_data: list[dict[str, Any]]) ->
         "healthScore": score_10,
         "family": "六亲互动宜以边界清晰为主，运势上行期更适合主动修复关系。",
         "familyScore": score_10,
-        "crypto": "高波动交易只宜在K线高分阶段小仓试错，低分阶段避免杠杆。",
+        "crypto": "高波动交易只宜放在财星或食伤生财且K线高分阶段；比劫夺财、财星压身、官杀管财月份避免杠杆。",
         "cryptoScore": score_10,
         "cryptoYear": f"{peak['year']}年（{peak['ganZhi']}）",
         "cryptoStyle": "现货定投/低杠杆波段",
@@ -1428,8 +2031,9 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
     pillars = bazi_context["pillars"]
     bazi = [pillars["year"], pillars["month"], pillars["day"], pillars["hour"]]
     dayun = life_dayun_info(birth_time, gender, pillars["year"], pillars["month"])
+    wealth_context = build_wealth_context(bazi)
     local = birth_time.astimezone(cast_timezone())
-    backend_chart_data = generate_backend_life_chart(local.year, bazi, dayun)
+    backend_chart_data = generate_backend_life_chart(local.year, bazi, dayun, wealth_context)
     chart_data = backend_chart_data
     if birth_input["inputCalendarType"] == "lunar":
         lunar = birth_input["lunar"]
@@ -1440,6 +2044,19 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
         )
     else:
         input_calendar_line = f"输入历法：阳历/公历，阳历生日：{local.strftime('%Y-%m-%d %H:%M')}"
+
+    day_master = wealth_context["dayMaster"]
+    pattern_profile = wealth_context["pattern"]
+    wealth_profile = wealth_context["wealth"]
+    ten_god_grid_text = "\n".join(
+        (
+            f"{row['label']}：{row['pillar']}，天干{row['stemTenGod']}，"
+            f"地支本气{row['branchMainTenGod']}，十二宫{row['growthState']}，月令季态{row['seasonState']}"
+        )
+        for row in wealth_context["tenGods"]
+    )
+    relation_text = "；".join(wealth_context["relations"][:8]) if wealth_context["relations"] else "原局少明显刑冲合会"
+    principle_text = "\n".join(f"- {note}" for note in wealth_context["principles"])
 
     context_prompt = f"""
 【基本信息】
@@ -1454,6 +2071,19 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
 日柱：{pillars["day"]}
 时柱：{pillars["hour"]}
 
+【后端已诊断命局总纲】
+日主：{day_master["dayStem"]}{day_master["dayElement"]}，{day_master["strengthLevel"]}，强弱分 {day_master["strengthScore"]}
+得令：月令{day_master["monthBranch"]}令日主{day_master["monthState"]}
+扶抑策略：{day_master["strategy"]}
+喜用方向：{"、".join(day_master["usefulGroups"])}
+忌偏重：{"、".join(day_master["avoidGroups"])}
+月令格局：{pattern_profile["patternName"]}（{pattern_profile["source"]}，{pattern_profile["quality"]}）
+十神盘面：
+{ten_god_grid_text}
+原局刑冲合会：{relation_text}
+命理原则：
+{principle_text}
+
 【后端已推算大运参数】
 大运方向：{dayun["direction"]}
 起运年龄（虚岁）：{dayun["startAge"]}
@@ -1461,8 +2091,16 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
 大运序列：{"、".join(dayun["sequence"])}
 参考节气：{dayun["referenceJie"]["name"]}，相差约 {dayun["referenceJie"]["deltaDays"]} 天
 
+【后端已诊断财运结构】
+财星五行：{wealth_profile["wealthElement"]}，财库：{wealth_profile["wealthStorageBranch"]}
+财运结构：{"、".join(wealth_profile["structures"])}
+财星显隐：透干 {wealth_profile["visibleWealth"]}，藏支 {wealth_profile["hiddenWealth"]}，综合财势 {wealth_profile["wealthPower"]}
+食伤/比劫/官杀/印星：{wealth_profile["outputPower"]}/{wealth_profile["peerPower"]}/{wealth_profile["officerPower"]}/{wealth_profile["resourcePower"]}
+取财状态：{wealth_profile["wealthReadiness"]}
+
 请严格使用上面的四柱、大运方向、起运年龄、第一步大运和大运序列。
 chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1；ganZhi 必须对应该流年干支。
+报告只能说结构趋势、风险和建议；不要输出绝对命定、恐吓式断语，也不要使用带性别偏见的旧式断语。
 """.strip()
     allow_model_charts = truthy(os.getenv("LIFE_KLINE_MODEL_CHARTS"))
     model_info = {
@@ -1484,10 +2122,10 @@ chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1�
         analysis = generate_model_analysis(context_prompt, bazi, chart_data)
         model_info["analysisSource"] = "model"
     except Exception as exc:
-        analysis = fallback_life_analysis(bazi, chart_data)
+        analysis = fallback_life_analysis(bazi, chart_data, wealth_context)
         model_info["analysisSource"] = "backend_fallback"
         model_info["analysisError"] = str(exc)[:500]
-    month_chart_data, month_kline = generate_month_life_chart(chart_data, bazi)
+    month_chart_data, month_kline = generate_month_life_chart(chart_data, bazi, wealth_context)
     return {
         "birthInfo": {
             "name": name,
@@ -1502,6 +2140,8 @@ chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1�
             "dayun": dayun,
         },
         "analysis": analysis,
+        "baziContext": wealth_context,
+        "wealthContext": wealth_context,
         "chartData": chart_data,
         "monthChartData": month_chart_data,
         "monthKline": month_kline,

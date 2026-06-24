@@ -426,14 +426,18 @@ function buildLifeMonthList(monthPoints) {
   return monthPoints
     .map((point) => {
       const signals = Array.isArray(point.signals) && point.signals.length ? point.signals.join(" / ") : "少刑冲";
+      const branchTenGods = Array.isArray(point.branchTenGods) && point.branchTenGods.length ? `藏干 ${point.branchTenGods.join("、")}` : "";
       return `
         <div class="life-month-row">
           <strong>${escapeHtml(point.monthLabel || point.monthName || "-")}</strong>
-          <span>${escapeHtml(point.tenGod || "-")} · 月令${escapeHtml(point.seasonState || "-")} · 十二宫${escapeHtml(
+          <span>${escapeHtml(point.event || "平衡蓄势")} · ${escapeHtml(point.tenGod || "-")} · 月令${escapeHtml(point.seasonState || "-")} · 十二宫${escapeHtml(
             point.growthState || "-",
-          )} · ${escapeHtml(point.category || "-")}</span>
+          )}${branchTenGods ? ` · ${escapeHtml(branchTenGods)}` : ""}</span>
           <em>O ${escapeHtml(point.open)} H ${escapeHtml(point.high)} L ${escapeHtml(point.low)} C ${escapeHtml(point.close)}</em>
-          <p>${escapeHtml(signals)}；${escapeHtml(point.reason || "")}</p>
+          <p><b>机会</b>${escapeHtml(point.opportunity || point.reason || "-")}</p>
+          <p><b>风险</b>${escapeHtml(point.risk || signals)}</p>
+          <p><b>操作</b>${escapeHtml(point.advice || "观察节奏，等待触发")}</p>
+          <p class="life-month-signals">${escapeHtml(signals)}</p>
         </div>`;
     })
     .join("");
@@ -455,8 +459,8 @@ function renderLifeMonthPanel(card, year, monthByYear) {
   panel.innerHTML = `
     <div class="life-month-head">
       <div>
-        <span>FLOW MONTHS</span>
-        <strong>${escapeHtml(year || "-")} ${escapeHtml(first.annualGanZhi || "")} · 节气流月K线</strong>
+        <span>WEALTH MONTHS</span>
+        <strong>${escapeHtml(year || "-")} ${escapeHtml(first.annualGanZhi || "")} · 财运节气月K线</strong>
       </div>
       <em>${aggregate ? `聚合年K O${aggregate.open} H${aggregate.high} L${aggregate.low} C${aggregate.close}` : "等待选择年份"}</em>
     </div>
@@ -659,6 +663,21 @@ function renderLifeKline(result) {
   const dayun = birth.dayun || {};
   const bazi = Array.isArray(birth.bazi) ? birth.bazi : analysis.bazi || [];
   const baziText = bazi.length ? bazi.map(escapeHtml).join("　") : "-";
+  const baziContext = result.baziContext || result.wealthContext || {};
+  const dayMaster = baziContext.dayMaster || {};
+  const patternProfile = baziContext.pattern || {};
+  const wealthProfile = baziContext.wealth || {};
+  const usefulGroups = Array.isArray(dayMaster.usefulGroups) ? dayMaster.usefulGroups.join("、") : "-";
+  const avoidGroups = Array.isArray(dayMaster.avoidGroups) ? dayMaster.avoidGroups.join("、") : "-";
+  const relationSummary =
+    Array.isArray(baziContext.relations) && baziContext.relations.length ? baziContext.relations.slice(0, 3).join(" / ") : "原局少明显刑冲合会";
+  const wealthStructures = Array.isArray(wealthProfile.structures) ? wealthProfile.structures.join("、") : "-";
+  const patternHeadline = patternProfile.patternName
+    ? `${patternProfile.patternName} · ${patternProfile.quality || "看全局扶抑"}`
+    : "-";
+  const wealthHeadline = dayMaster.strengthLevel
+    ? `${dayMaster.dayStem || ""}${dayMaster.dayElement || ""}${dayMaster.strengthLevel} · 财星${wealthProfile.wealthElement || "-"} · ${wealthProfile.wealthReadiness || "-"}`
+    : "-";
   const peak = points.reduce((best, point) => (numericValue(point.high) > numericValue(best?.high) ? point : best), null);
   const first = points[0] || {};
   const last = points[points.length - 1] || {};
@@ -706,6 +725,25 @@ function renderLifeKline(result) {
             dayun.firstDaYun || "-",
           )}</strong>
         </div>
+        <div class="life-core-panel">
+          <span>命局总纲</span>
+          <strong>${escapeHtml(
+            dayMaster.strengthLevel
+              ? `${dayMaster.dayStem || ""}${dayMaster.dayElement || ""}${dayMaster.strengthLevel} · ${patternHeadline}`
+              : patternHeadline,
+          )}</strong>
+          <p>${escapeHtml(dayMaster.strategy || "以日主、月令、格局和岁运合看。")}</p>
+          <p><b>喜</b>${escapeHtml(usefulGroups)} <b>忌</b>${escapeHtml(avoidGroups)}</p>
+        </div>
+        <div>
+          <span>财运结构</span>
+          <strong>${escapeHtml(wealthHeadline)}</strong>
+          <p>${escapeHtml(wealthStructures)}</p>
+        </div>
+        <div>
+          <span>刑冲合会</span>
+          <strong>${escapeHtml(relationSummary)}</strong>
+        </div>
         <div>
           <span>峰值</span>
           <strong>${peak ? `${escapeHtml(peak.year)}年 ${escapeHtml(peak.ganZhi)}，${escapeHtml(peak.age)}岁` : "-"}</strong>
@@ -723,10 +761,10 @@ function renderLifeKline(result) {
     <section class="life-month-panel" data-life-month-panel aria-label="选中年份的流月K线">
       <div class="life-month-head">
         <div>
-          <span>FLOW MONTHS</span>
-          <strong>选择年线后显示 12 个节气月</strong>
+          <span>WEALTH MONTHS</span>
+          <strong>选择年线后显示 12 个财运节气月</strong>
         </div>
-        <em>${escapeHtml(monthKline.yearPreserving ? "聚合校验通过：月K不改年K" : "等待月K校验")}</em>
+        <em>${escapeHtml(monthKline.yearPreserving ? "财运月K聚合=年K" : "等待财运月K校验")}</em>
       </div>
     </section>
     <div class="life-crypto-badges">
