@@ -1077,13 +1077,14 @@ dd {
 .life-tv-header {
   min-width: 980px;
   display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2.2fr);
+  grid-template-columns: minmax(220px, 0.7fr) minmax(300px, 1fr) minmax(0, 2fr);
   align-items: center;
   border-bottom: 1px solid #2a2e39;
   background: #131722;
 }
 
-.life-symbol-block {
+.life-symbol-block,
+.life-bazi-strip {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1093,6 +1094,7 @@ dd {
 }
 
 .life-symbol-block span,
+.life-bazi-strip span,
 .life-chart-toolbar span,
 .life-side-panel span {
   color: #787b86;
@@ -1104,6 +1106,22 @@ dd {
   color: #f0f3fa;
   font-size: 18px;
   font-weight: 700;
+}
+
+.life-bazi-strip {
+  min-width: 0;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 4px 10px;
+}
+
+.life-bazi-strip strong {
+  min-width: 0;
+  color: #f0f3fa;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .life-symbol-block em,
@@ -1138,7 +1156,7 @@ dd {
 .life-trading-layout {
   min-width: 980px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.28fr);
   min-height: 520px;
 }
 
@@ -1152,20 +1170,40 @@ dd {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
   min-height: 44px;
   border-bottom: 1px solid #2a2e39;
   padding: 8px 12px;
 }
 
 .life-chart-toolbar span {
+  flex: 1 1 auto;
+  min-width: 120px;
   margin-right: auto;
+  white-space: nowrap;
 }
 
 .life-chart-toolbar button,
 .life-year-rail button {
+  flex: 0 0 auto;
+  width: auto;
+  height: 28px;
   min-width: 38px;
   min-height: 28px;
+  margin-top: 0;
+  justify-content: center;
   padding: 0 9px;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.life-chart-toolbar button:hover,
+.life-year-rail button:hover {
+  background: #2a2e39;
+}
+
+.life-chart-toolbar button:active,
+.life-year-rail button:active {
+  transform: none;
 }
 
 .life-chart-toolbar button.is-active,
@@ -1177,7 +1215,9 @@ dd {
 
 .life-chart-svg {
   display: block;
+  width: 100%;
   min-width: 980px;
+  height: auto;
   border: 0;
   border-bottom: 1px solid #2a2e39;
   background:
@@ -1351,6 +1391,9 @@ dd {
   color: #f0f3fa;
   font-size: 15px;
   line-height: 1.5;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .life-selected-panel {
@@ -1844,6 +1887,11 @@ dd {
   }
 
   .life-symbol-block {
+    border-right: 0;
+    border-bottom: 1px solid #2a2e39;
+  }
+
+  .life-bazi-strip {
     border-right: 0;
     border-bottom: 1px solid #2a2e39;
   }

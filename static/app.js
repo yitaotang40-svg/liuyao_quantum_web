@@ -340,6 +340,7 @@ function buildLifeChartSvg(points, options = {}) {
   const bodyWidth = Math.max(3, Math.min(points.length <= 24 ? 18 : 8, step * 0.58));
   const gridLines = [0, 20, 40, 60, 80, 100];
   const period = options.period || "year";
+  const xTickY = height - 8;
 
   const candles = points
     .map((point, index) => {
@@ -366,7 +367,7 @@ function buildLifeChartSvg(points, options = {}) {
     .map((point, index) => {
       if (points.length > 24 && index % 10 !== 0 && index !== points.length - 1) return "";
       const x = left + index * step;
-      return `<text x="${x.toFixed(2)}" y="${height - 18}" text-anchor="middle">${escapeHtml(lifeAxisLabel(point))}</text>`;
+      return `<text x="${x.toFixed(2)}" y="${xTickY}" text-anchor="middle">${escapeHtml(lifeAxisLabel(point))}</text>`;
     })
     .join("");
 
@@ -606,6 +607,10 @@ function renderLifeWaiting() {
         <strong>正在生成</strong>
         <em>1Y</em>
       </div>
+      <div class="life-bazi-strip">
+        <span>四柱</span>
+        <strong class="life-skeleton-text"></strong>
+      </div>
       <div class="life-ohlc-strip">
         <span>Y <strong>--</strong></span>
         <span>O <strong>--</strong></span>
@@ -653,6 +658,7 @@ function renderLifeKline(result) {
   const model = result.model || {};
   const dayun = birth.dayun || {};
   const bazi = Array.isArray(birth.bazi) ? birth.bazi : analysis.bazi || [];
+  const baziText = bazi.length ? bazi.map(escapeHtml).join("　") : "-";
   const peak = points.reduce((best, point) => (numericValue(point.high) > numericValue(best?.high) ? point : best), null);
   const first = points[0] || {};
   const last = points[points.length - 1] || {};
@@ -664,6 +670,10 @@ function renderLifeKline(result) {
         <span>LIFEKLINE</span>
         <strong>${escapeHtml(birth.name || "人生K线")}</strong>
         <em>1Y</em>
+      </div>
+      <div class="life-bazi-strip">
+        <span>四柱</span>
+        <strong>${baziText}</strong>
       </div>
       <div class="life-ohlc-strip" aria-live="polite">
         <span>Y <strong data-life-selected="year">${escapeHtml(first.year || "-")}</strong></span>
@@ -688,7 +698,7 @@ function renderLifeKline(result) {
       <aside class="life-side-panel">
         <div>
           <span>四柱</span>
-          <strong>${bazi.map(escapeHtml).join("　")}</strong>
+          <strong>${baziText}</strong>
         </div>
         <div>
           <span>大运</span>
