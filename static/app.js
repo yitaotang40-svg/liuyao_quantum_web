@@ -45,6 +45,17 @@ let currentRunId = null;
 let isRunning = false;
 let toastTimer = null;
 const yaoNames = ["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"];
+let activeMode = "quantum";
+const defaultModeStatuses = {
+  quantum: { status: "IDLE", status_label: "待起卦", backend: "-", job_id: "-" },
+  manual: { status: "IDLE", status_label: "待排盘", backend: "手动输入", job_id: "-" },
+  life: { status: "IDLE", status_label: "待生成", backend: "Gemini API", job_id: "-" },
+};
+const modeStates = {
+  quantum: { status: { ...defaultModeStatuses.quantum }, view: { type: "empty" } },
+  manual: { status: { ...defaultModeStatuses.manual }, view: { type: "empty" } },
+  life: { status: { ...defaultModeStatuses.life }, view: { type: "empty" } },
+};
 
 function setResultChrome(mode) {
   const isLife = mode === "life";
@@ -67,10 +78,80 @@ function setStatus(job) {
   statusText.textContent = job.status_label || job.status || "等待中";
   backendText.textContent = job.backend || "-";
   jobText.textContent = job.job_id || "-";
-  panelTitle.textContent = job.status === "DONE" ? "已完成" : job.status === "ERROR" ? "需要重试" : "运行中";
+  panelTitle.textContent =
+    job.status === "DONE" ? "已完成" : job.status === "ERROR" ? "需要重试" : job.status === "IDLE" ? "就绪" : "运行中";
   liveDot.className = `live-dot ${
-    job.status === "DONE" ? "done" : job.status === "ERROR" ? "error" : "busy"
+    job.status === "DONE" ? "done" : job.status === "ERROR" ? "error" : job.status === "IDLE" ? "" : "busy"
   }`;
+}
+
+function renderEmpty(mode = "quantum") {
+  setResultChrome(mode);
+  resultPanel.classList.remove("is-waiting");
+  waitHint.hidden = true;
+  yaoList.classList.remove("chart-mode", "life-mode");
+  yaoList.innerHTML = "";
+  const labels = {
+    quantum: ["运行结果：", "还没有 IBM 量子起卦结果"],
+    manual: ["手动排盘：", "还没有手动排盘结果"],
+    life: ["人生K线：", "还没有人生K线结果"],
+  };
+  const [title, text] = labels[mode] || labels.quantum;
+  resultTitleText.textContent = title;
+  const item = document.createElement("li");
+  item.className = "empty";
+  item.textContent = text;
+  yaoList.appendChild(item);
+}
+
+function renderBusyPlaceholder(mode, text) {
+  setResultChrome(mode);
+  resultPanel.classList.add("is-waiting");
+  waitHint.hidden = false;
+  resultTitleText.textContent = mode === "life" ? "等待人生K线：" : "等待排盘：";
+  yaoList.classList.remove("chart-mode", "life-mode");
+  yaoList.innerHTML = "";
+  const item = document.createElement("li");
+  item.className = "empty";
+  item.textContent = text;
+  yaoList.appendChild(item);
+}
+
+function renderModeView(mode) {
+  const state = modeStates[mode] || modeStates.quantum;
+  setStatus(state.status || defaultModeStatuses[mode] || defaultModeStatuses.quantum);
+  const view = state.view || { type: "empty" };
+  if (view.type === "quantumWaiting") {
+    renderWaiting();
+  } else if (view.type === "manualWaiting") {
+    renderBusyPlaceholder("manual", "正在手动装卦...");
+  } else if (view.type === "lifeWaiting") {
+    renderLifeWaiting();
+  } else if (view.type === "result") {
+    renderResult(view.payload);
+  } else if (view.type === "lifeResult") {
+    renderLifeKline(view.payload);
+  } else if (view.type === "error") {
+    renderError(view.payload || {}, mode);
+  } else {
+    renderEmpty(mode);
+  }
+}
+
+function setModeStatus(mode, job) {
+  if (!modeStates[mode]) return;
+  modeStates[mode].status = job;
+  if (mode === activeMode) {
+    setStatus(job);
+  }
+}
+
+function setModeView(mode, type, payload = null) {
+  if (!modeStates[mode]) return;
+  modeStates[mode].view = { type, payload };
+  if (mode === activeMode) {
+    renderModeView(mode);
+  }
 }
 
 function renderWaiting() {
@@ -610,6 +691,7 @@ function updateLifeCalendarFields() {
 }
 
 function setMode(mode) {
+  activeMode = mode;
   modeButtons.forEach((button) => {
     const active = button.dataset.mode === mode;
     button.classList.toggle("is-active", active);
@@ -618,6 +700,7 @@ function setMode(mode) {
   modePanels.forEach((panel) => {
     panel.hidden = panel.dataset.modePanel !== mode;
   });
+  renderModeView(mode);
 }
 
 function showWaitToast(message = "请等待当前这一卦完成") {
@@ -643,7 +726,7 @@ function hideConfirmModal() {
 async function pollJob(runId) {
   const response = await fetch(`${apiBase}/api/jobs/${runId}`);
   const job = await response.json();
-  setStatus(job);
+  setModeStatus("quantum", job);
 
   if (job.status === "DONE") {
     clearInterval(pollTimer);
@@ -651,7 +734,7 @@ async function pollJob(runId) {
     currentRunId = null;
     isRunning = false;
     setRunningControls(false, "一键起卦");
-    renderResult(job.result);
+    setModeView("quantum", "result", job.result);
     return;
   }
 
@@ -661,7 +744,7 @@ async function pollJob(runId) {
     currentRunId = null;
     isRunning = false;
     setRunningControls(false, "重新起卦");
-    renderError(job);
+    setModeView("quantum", "error", job);
   }
 }
 
@@ -670,7 +753,13 @@ async function startPolling(runId) {
   currentRunId = runId;
   isRunning = true;
   setRunningControls(true, "一卦进行中");
-  renderWaiting();
+  setModeStatus("quantum", {
+    status: "RUNNING",
+    status_label: "等待 IBM Runtime",
+    backend: backendSelect.value || "自动选择",
+    job_id: "-",
+  });
+  setModeView("quantum", "quantumWaiting");
   await pollJob(runId);
   if (!pollTimer && isRunning) {
     pollTimer = setInterval(() => pollJob(runId), 2200);
@@ -681,7 +770,7 @@ async function resumeActiveJob() {
   const response = await fetch(`${apiBase}/api/active-job`);
   const data = await response.json();
   if (data.job?.run_id) {
-    setStatus(data.job);
+    setModeStatus("quantum", data.job);
     await startPolling(data.job.run_id);
   }
 }
@@ -693,14 +782,16 @@ async function submitDivination() {
   }
 
   clearInterval(pollTimer);
+  setMode("quantum");
   isRunning = true;
   setRunningControls(true, "起卦中");
-  panelTitle.textContent = "运行中";
-  liveDot.className = "live-dot busy";
-  statusText.textContent = "准备起卦";
-  backendText.textContent = backendSelect.value || "自动选择";
-  jobText.textContent = "-";
-  renderWaiting();
+  setModeStatus("quantum", {
+    status: "RUNNING",
+    status_label: "准备起卦",
+    backend: backendSelect.value || "自动选择",
+    job_id: "-",
+  });
+  setModeView("quantum", "quantumWaiting");
 
   try {
     const response = await fetch(`${apiBase}/api/divinations`, {
@@ -722,22 +813,16 @@ async function submitDivination() {
     currentRunId = null;
     isRunning = false;
     setRunningControls(false, "重新起卦");
-    renderError({ error: error instanceof TypeError ? backendUnavailableMessage : String(error) });
+    setModeStatus("quantum", { status: "ERROR", status_label: "出错", backend: backendSelect.value || "自动选择", job_id: "-" });
+    setModeView("quantum", "error", { error: error instanceof TypeError ? backendUnavailableMessage : String(error) });
   }
 }
 
 async function submitManualChart() {
-  if (isRunning || currentRunId) {
-    showWaitToast("IBM 作业运行中，完成后再手动排盘");
-    return;
-  }
-
+  setMode("manual");
   setManualControls(true);
-  panelTitle.textContent = "排盘中";
-  liveDot.className = "live-dot busy";
-  statusText.textContent = "手动排盘";
-  backendText.textContent = "手动输入";
-  jobText.textContent = "-";
+  setModeStatus("manual", { status: "RUNNING", status_label: "手动排盘", backend: "手动输入", job_id: "-" });
+  setModeView("manual", "manualWaiting");
 
   try {
     const response = await fetch(`${apiBase}/api/manual-chart`, {
@@ -752,39 +837,31 @@ async function submitManualChart() {
     if (!response.ok) {
       throw new Error(data.error || "手动排盘失败");
     }
-    setStatus({
+    setModeStatus("manual", {
       status: "DONE",
       status_label: "完成",
       backend: data.result?.backend || "手动排盘",
       job_id: data.result?.job_id || "manual",
     });
-    renderResult(data.result);
+    setModeView("manual", "result", data.result);
   } catch (error) {
-    setStatus({ status: "ERROR", status_label: "出错", backend: "手动输入", job_id: "-" });
-    renderError({ error: error instanceof TypeError ? backendUnavailableMessage : String(error) });
+    setModeStatus("manual", { status: "ERROR", status_label: "出错", backend: "手动输入", job_id: "-" });
+    setModeView("manual", "error", { error: error instanceof TypeError ? backendUnavailableMessage : String(error) });
   } finally {
     setManualControls(false);
   }
 }
 
 async function submitLifeKline() {
-  if (isRunning || currentRunId) {
-    showWaitToast("IBM 作业运行中，完成后再生成人生K线");
-    return;
-  }
-
   if (!lifeBirthTime.value) {
     showWaitToast(`请填写${lifeCalendarType.value === "lunar" ? "农历" : "阳历"}出生日期时间`);
     return;
   }
 
+  setMode("life");
   setLifeControls(true);
-  panelTitle.textContent = "生成中";
-  liveDot.className = "live-dot busy";
-  statusText.textContent = "人生K线生成中";
-  backendText.textContent = "Gemini API";
-  jobText.textContent = "life-kline";
-  renderLifeWaiting();
+  setModeStatus("life", { status: "RUNNING", status_label: "人生K线生成中", backend: "Gemini API", job_id: "life-kline" });
+  setModeView("life", "lifeWaiting");
 
   try {
     const response = await fetch(`${apiBase}/api/life-kline`, {
@@ -802,16 +879,16 @@ async function submitLifeKline() {
     if (!response.ok) {
       throw new Error(data.error || "人生K线生成失败");
     }
-    setStatus({
+    setModeStatus("life", {
       status: "DONE",
       status_label: "完成",
       backend: "Gemini API",
       job_id: "life-kline",
     });
-    renderLifeKline(data.result);
+    setModeView("life", "lifeResult", data.result);
   } catch (error) {
-    setStatus({ status: "ERROR", status_label: "出错", backend: "Gemini API", job_id: "-" });
-    renderError({ error: error instanceof TypeError ? backendUnavailableMessage : String(error) }, "life");
+    setModeStatus("life", { status: "ERROR", status_label: "出错", backend: "Gemini API", job_id: "-" });
+    setModeView("life", "error", { error: error instanceof TypeError ? backendUnavailableMessage : String(error) });
   } finally {
     setLifeControls(false);
   }
@@ -827,7 +904,7 @@ window.__submitLiuyaoFromModal = (event) => {
 
 castButton.addEventListener("click", () => {
   if (isRunning || currentRunId) {
-    showWaitToast();
+    showWaitToast("已有 IBM 作业运行中，仍可使用手动排盘或人生K线");
     return;
   }
 

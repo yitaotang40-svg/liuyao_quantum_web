@@ -43,7 +43,7 @@
           </div>
           <div>
             <span>Flow</span>
-            <strong>One job</strong>
+            <strong>Parallel</strong>
           </div>
         </div>
       </section>
@@ -80,7 +80,7 @@
 
             <div class="runtime-note">
               <span>真实 IBM Quantum 作业</span>
-              <strong>等待期间锁定本次起卦</strong>
+              <strong>等待时仍可排盘/K线</strong>
             </div>
           </div>
 
@@ -254,7 +254,7 @@
       <div class="confirm-dialog">
         <p class="confirm-kicker">IBM Quantum Runtime</p>
         <h2 id="confirmTitle">确定交给量子机？</h2>
-        <p class="confirm-copy">确认后会提交一次真实 IBM Quantum 作业，本次等待期间只能起这一卦。</p>
+        <p class="confirm-copy">确认后会提交一次真实 IBM Quantum 作业。等待期间不能重复提交 IBM 起卦，但可继续使用手动排盘和人生K线。</p>
         <div class="confirm-actions">
           <button id="confirmCancel" class="ghost-button" type="button" data-confirm-action="cancel">先取消</button>
           <button id="confirmSubmit" class="solid-button" type="button" data-confirm-action="submit" onclick="window.__submitLiuyaoFromModal && window.__submitLiuyaoFromModal(event)">确认起卦</button>
@@ -263,6 +263,6 @@
     </div>
 
     <script src="./config.js?v=2"></script>
-    <script src="./app.js?v=16"></script>
+    <script src="./app.js?v=17"></script>
   </body>
 </html>
