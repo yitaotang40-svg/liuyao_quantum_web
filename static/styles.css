@@ -1588,6 +1588,715 @@ dd {
   background: linear-gradient(90deg, var(--interactive), var(--green));
 }
 
+.result-panel.life-terminal {
+  background:
+    linear-gradient(135deg, rgba(37, 48, 37, 0.96), rgba(21, 18, 31, 0.98) 48%, rgba(18, 30, 34, 0.98)),
+    #121416;
+}
+
+.result-panel.life-terminal .quantum-lines {
+  display: none;
+}
+
+.result-panel.life-terminal .result-toolbar {
+  border-color: rgba(105, 117, 96, 0.34);
+  background: rgba(19, 24, 22, 0.94);
+  color: #a8b2a5;
+}
+
+.result-panel.life-terminal .result-title {
+  color: #f6f2df;
+  font-family: var(--sans);
+  font-weight: 700;
+}
+
+.life-kline-card {
+  border: 1px solid rgba(141, 159, 128, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(26, 34, 30, 0.98), rgba(14, 17, 19, 0.98)),
+    #101315;
+  color: #f4f0df;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+}
+
+.life-tv-header {
+  grid-template-columns: minmax(210px, 0.66fr) minmax(280px, 0.9fr) minmax(320px, 1.2fr) minmax(300px, 1fr);
+  border-bottom-color: rgba(141, 159, 128, 0.3);
+  background:
+    linear-gradient(90deg, rgba(35, 47, 40, 0.94), rgba(30, 25, 43, 0.88) 54%, rgba(29, 43, 45, 0.94));
+}
+
+.life-symbol-block,
+.life-bazi-strip {
+  border-right-color: rgba(141, 159, 128, 0.26);
+}
+
+.life-symbol-block span,
+.life-bazi-strip span,
+.life-chart-toolbar span,
+.life-side-panel span,
+.life-pulse-strip span {
+  color: #aeb9a7;
+  letter-spacing: 0;
+}
+
+.life-symbol-block strong,
+.life-bazi-strip strong,
+.life-month-head strong,
+.life-card-head strong {
+  color: #fff8df;
+}
+
+.life-symbol-block em,
+.life-chart-toolbar button,
+.life-year-rail button {
+  border-color: rgba(171, 190, 153, 0.28);
+  border-radius: 6px;
+  background: rgba(243, 210, 122, 0.1);
+  color: #f6df9b;
+}
+
+.life-ohlc-strip,
+.life-pulse-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px 14px;
+  min-height: 58px;
+  border-left: 1px solid rgba(141, 159, 128, 0.18);
+  padding: 10px 14px;
+  color: #aeb9a7;
+  font: 12px var(--mono);
+}
+
+.life-ohlc-strip strong {
+  color: #59d99d;
+}
+
+.life-pulse-strip {
+  background: rgba(8, 12, 11, 0.18);
+}
+
+.life-pulse-strip strong {
+  color: #f6cf72;
+  font-weight: 800;
+}
+
+.life-trading-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(350px, 0.32fr);
+  background: rgba(16, 19, 21, 0.98);
+}
+
+.life-chart-panel {
+  border-right-color: rgba(141, 159, 128, 0.28);
+  background: #111619;
+}
+
+.life-chart-toolbar {
+  border-bottom-color: rgba(141, 159, 128, 0.26);
+  background:
+    linear-gradient(90deg, rgba(18, 27, 25, 0.98), rgba(26, 22, 35, 0.96));
+}
+
+.life-chart-toolbar button:hover,
+.life-year-rail button:hover {
+  background: rgba(243, 210, 122, 0.18);
+}
+
+.life-chart-toolbar button.is-active,
+.life-year-rail button.is-selected {
+  border-color: #f6cf72;
+  background: rgba(246, 207, 114, 0.18);
+  color: #fff8df;
+}
+
+.life-chart-svg {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(17, 25, 24, 0.98), rgba(13, 15, 20, 0.98));
+  background-size: 78px 100%, 100% 56px, 100% 100%;
+}
+
+.life-grid line {
+  stroke: rgba(174, 185, 167, 0.2);
+}
+
+.life-grid text,
+.life-xaxis text {
+  fill: #9ca898;
+}
+
+.life-axis {
+  stroke: rgba(246, 207, 114, 0.36);
+}
+
+.life-close-line {
+  fill: none;
+  stroke: #f6cf72;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+.life-candle line,
+.life-candle rect {
+  filter: drop-shadow(0 0 5px rgba(246, 207, 114, 0.08));
+}
+
+.life-crosshair-line {
+  stroke: rgba(246, 240, 223, 0.74);
+}
+
+.life-selected-dot,
+.life-axis-label-bg,
+.life-price-label-bg {
+  fill: #f6cf72;
+}
+
+.life-selected-dot {
+  stroke: #111619;
+}
+
+.life-axis-label,
+.life-price-label {
+  fill: #111619;
+}
+
+.life-year-rail {
+  border-bottom-color: rgba(141, 159, 128, 0.26);
+  background: rgba(12, 16, 17, 0.82);
+}
+
+.life-side-panel {
+  background: rgba(141, 159, 128, 0.26);
+}
+
+.life-side-panel > div,
+.life-analysis-card,
+.life-month-row {
+  background:
+    linear-gradient(180deg, rgba(27, 35, 31, 0.98), rgba(17, 20, 23, 0.98));
+}
+
+.life-side-panel strong {
+  color: #fff8df;
+}
+
+.life-side-panel p,
+.life-analysis-card p {
+  color: #d6d0bd;
+}
+
+.life-core-panel b,
+.life-selected-panel b,
+.life-month-row b {
+  color: #59d99d;
+}
+
+.life-month-panel {
+  border-top-color: rgba(141, 159, 128, 0.32);
+  background: #111619;
+}
+
+.life-month-head {
+  border-bottom-color: rgba(141, 159, 128, 0.28);
+  background:
+    linear-gradient(90deg, rgba(31, 39, 32, 0.98), rgba(36, 28, 45, 0.94));
+}
+
+.life-month-chart {
+  border-right-color: rgba(141, 159, 128, 0.28);
+}
+
+.life-month-list {
+  background: rgba(15, 18, 20, 0.98);
+}
+
+.life-month-tags span {
+  border-color: rgba(246, 207, 114, 0.24);
+  background: rgba(246, 207, 114, 0.08);
+  color: #f6df9b;
+}
+
+.life-month-meter {
+  background: rgba(174, 185, 167, 0.18);
+}
+
+.life-month-meter i,
+.life-score i {
+  background: linear-gradient(90deg, #59d99d, #f6cf72 52%, #ff7a7a);
+}
+
+.life-month-row span,
+.life-month-row em,
+.life-month-row p,
+.life-month-empty {
+  color: #c9c2ad;
+}
+
+.life-crypto-badges {
+  min-width: 980px;
+  gap: 8px;
+  border-top: 1px solid rgba(141, 159, 128, 0.24);
+  background: rgba(11, 14, 16, 0.92);
+  padding: 12px 14px;
+}
+
+.life-crypto-badges span {
+  border-color: rgba(246, 207, 114, 0.26);
+  border-radius: 999px;
+  background: rgba(246, 207, 114, 0.08);
+  color: #f6df9b;
+}
+
+.life-analysis-grid {
+  min-width: 980px;
+  gap: 1px;
+  border-top: 1px solid rgba(141, 159, 128, 0.24);
+  background: rgba(141, 159, 128, 0.26);
+}
+
+.life-score {
+  background: rgba(174, 185, 167, 0.16);
+}
+
+/* Life Kline standalone market dashboard */
+.result-panel.life-terminal {
+  background:
+    linear-gradient(135deg, rgba(8, 18, 24, 0.98), rgba(11, 13, 25, 0.99) 45%, rgba(16, 23, 21, 0.98)),
+    #080b10;
+}
+
+.result-panel.life-terminal .result-toolbar {
+  border-color: rgba(88, 104, 128, 0.38);
+  background: rgba(8, 12, 18, 0.96);
+}
+
+.result-panel.life-terminal .result-title {
+  width: calc(100% - 32px);
+  margin: 18px 16px 12px;
+  color: #e8eef7;
+  font: 700 18px var(--sans);
+}
+
+.result-panel.life-terminal .yao-list.life-mode {
+  width: calc(100% - 32px);
+  margin: 0 16px 44px;
+}
+
+.life-kline-card {
+  border: 1px solid rgba(83, 101, 126, 0.48);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(13, 20, 28, 0.98), rgba(7, 10, 15, 0.99)),
+    #090d13;
+  color: #e8eef7;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.46);
+  overflow-x: auto;
+}
+
+.life-market-shell {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.life-hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.1fr) minmax(220px, 0.5fr);
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(83, 101, 126, 0.4);
+  border-radius: 8px;
+  background: rgba(83, 101, 126, 0.3);
+}
+
+.life-title-stack,
+.life-hero-bazi,
+.life-hero-ticker {
+  min-height: 128px;
+  display: grid;
+  align-content: center;
+  gap: 9px;
+  background:
+    linear-gradient(145deg, rgba(16, 31, 39, 0.98), rgba(13, 17, 29, 0.98)),
+    #0c1119;
+  padding: 18px;
+}
+
+.life-title-stack span,
+.life-hero-bazi span,
+.life-metric-grid span,
+.life-chart-toolbar span,
+.life-side-panel span,
+.life-month-head span,
+.life-month-head em,
+.life-crypto-badges span {
+  color: #8f9bad;
+  font: 700 11px var(--mono);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.life-title-stack h2 {
+  margin: 0;
+  color: #f5f8ff;
+  font-size: clamp(32px, 5vw, 68px);
+  line-height: 0.96;
+}
+
+.life-title-stack p,
+.life-hero-bazi p,
+.life-metric-grid p,
+.life-side-panel p {
+  margin: 0;
+  color: #aeb8c8;
+  line-height: 1.55;
+}
+
+.life-hero-bazi strong {
+  color: #f5f8ff;
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.life-hero-ticker {
+  justify-items: end;
+  text-align: right;
+  background:
+    linear-gradient(160deg, rgba(25, 44, 63, 0.98), rgba(12, 16, 26, 0.98)),
+    #0c1119;
+}
+
+.life-hero-ticker span {
+  color: #8f9bad;
+  font: 700 16px var(--mono);
+}
+
+.life-hero-ticker strong {
+  color: #38d39f;
+  font: 800 clamp(56px, 7vw, 92px) var(--mono);
+  line-height: 0.9;
+}
+
+.life-hero-ticker em {
+  color: #c4ccda;
+  font: 700 12px var(--mono);
+  font-style: normal;
+}
+
+.life-hero-ticker b {
+  color: #7aa2ff;
+}
+
+.life-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-metric-grid article {
+  min-height: 104px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  border: 1px solid rgba(83, 101, 126, 0.38);
+  border-top: 3px solid #7aa2ff;
+  border-radius: 8px;
+  background: rgba(13, 19, 29, 0.82);
+  padding: 14px;
+}
+
+.life-metric-grid article:nth-child(2) {
+  border-top-color: #ff6677;
+}
+
+.life-metric-grid article:nth-child(3) {
+  border-top-color: #38d39f;
+}
+
+.life-metric-grid article:nth-child(4) {
+  border-top-color: #d9b85f;
+}
+
+.life-metric-grid strong {
+  color: #f5f8ff;
+  font: 800 22px var(--mono);
+}
+
+.life-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.life-chart-stage,
+.life-command-panel {
+  overflow: hidden;
+  border: 1px solid rgba(83, 101, 126, 0.4);
+  border-radius: 8px;
+}
+
+.life-chart-panel {
+  background: #090d13;
+}
+
+.life-chart-toolbar {
+  min-height: 54px;
+  border-bottom: 1px solid rgba(83, 101, 126, 0.36);
+  background:
+    linear-gradient(90deg, rgba(10, 18, 27, 0.98), rgba(16, 18, 31, 0.98));
+  padding: 10px 14px;
+}
+
+.life-chart-toolbar button,
+.life-year-rail button {
+  border-color: rgba(122, 162, 255, 0.34);
+  border-radius: 6px;
+  background: rgba(122, 162, 255, 0.08);
+  color: #dce6ff;
+}
+
+.life-chart-toolbar button:hover,
+.life-year-rail button:hover {
+  background: rgba(122, 162, 255, 0.18);
+}
+
+.life-chart-toolbar button.is-active,
+.life-year-rail button.is-selected {
+  border-color: #7aa2ff;
+  background: rgba(122, 162, 255, 0.22);
+  color: #ffffff;
+}
+
+.life-chart-frame {
+  overflow-x: auto;
+  background: #070a10;
+}
+
+.life-chart-svg {
+  min-width: 1000px;
+  border: 0;
+  border-bottom: 1px solid rgba(83, 101, 126, 0.36);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(8, 13, 19, 1), rgba(5, 8, 13, 1));
+  background-size: 84px 100%, 100% 64px, 100% 100%;
+}
+
+.life-grid line {
+  stroke: rgba(164, 176, 196, 0.18);
+}
+
+.life-grid text,
+.life-xaxis text {
+  fill: #8793a6;
+}
+
+.life-axis {
+  stroke: rgba(164, 176, 196, 0.42);
+}
+
+.life-close-line {
+  fill: none;
+  stroke: #7aa2ff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.86;
+  pointer-events: none;
+}
+
+.life-candle line,
+.life-candle rect {
+  filter: drop-shadow(0 0 5px rgba(122, 162, 255, 0.1));
+}
+
+.life-crosshair-line {
+  stroke: rgba(232, 238, 247, 0.74);
+}
+
+.life-selected-dot,
+.life-axis-label-bg,
+.life-price-label-bg {
+  fill: #7aa2ff;
+}
+
+.life-selected-dot {
+  stroke: #071018;
+}
+
+.life-axis-label,
+.life-price-label {
+  fill: #ffffff;
+}
+
+.life-year-rail {
+  border-bottom: 0;
+  background: rgba(8, 12, 18, 0.96);
+  padding: 12px 14px;
+}
+
+.life-side-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  gap: 1px;
+  background: rgba(83, 101, 126, 0.28);
+}
+
+.life-side-panel > div {
+  min-height: 98px;
+  background:
+    linear-gradient(180deg, rgba(14, 22, 32, 0.98), rgba(10, 14, 21, 0.98));
+  padding: 16px;
+}
+
+.life-side-panel strong {
+  color: #f5f8ff;
+  font-size: 16px;
+}
+
+.life-selected-panel {
+  min-height: 220px;
+  grid-column: span 2;
+}
+
+.life-selected-panel > strong {
+  color: #38d39f;
+  font-size: 22px;
+}
+
+.life-ohlc-strip {
+  border: 1px solid rgba(83, 101, 126, 0.34);
+  border-radius: 8px;
+  background: rgba(7, 10, 16, 0.68);
+  padding: 10px;
+}
+
+.life-ohlc-strip strong {
+  color: #38d39f;
+}
+
+.life-core-panel b,
+.life-selected-panel b,
+.life-month-row b {
+  color: #7aa2ff;
+}
+
+.life-month-panel,
+.life-crypto-badges,
+.life-analysis-grid {
+  min-width: 0;
+}
+
+.life-month-panel {
+  overflow: hidden;
+  border: 1px solid rgba(83, 101, 126, 0.4);
+  border-radius: 8px;
+  background: #090d13;
+}
+
+.life-month-head {
+  border-bottom: 1px solid rgba(83, 101, 126, 0.36);
+  background:
+    linear-gradient(90deg, rgba(13, 23, 30, 0.98), rgba(18, 18, 31, 0.98));
+}
+
+.life-month-chart {
+  border-right-color: rgba(83, 101, 126, 0.36);
+  background: #070a10;
+}
+
+.life-chart-svg-month {
+  min-width: 620px;
+  max-height: 320px;
+}
+
+.life-month-list {
+  background: #0a0e15;
+}
+
+.life-month-row {
+  border-bottom-color: rgba(83, 101, 126, 0.3);
+  background: rgba(13, 19, 29, 0.9);
+}
+
+.life-month-tags span {
+  border-color: rgba(122, 162, 255, 0.32);
+  background: rgba(122, 162, 255, 0.1);
+  color: #dce6ff;
+}
+
+.life-month-meter {
+  background: rgba(143, 155, 173, 0.16);
+}
+
+.life-month-meter i,
+.life-score i {
+  background: linear-gradient(90deg, #ff6677, #d9b85f 48%, #38d39f);
+}
+
+.life-month-row span,
+.life-month-row em,
+.life-month-row p,
+.life-month-empty {
+  color: #aeb8c8;
+}
+
+.life-crypto-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid rgba(83, 101, 126, 0.34);
+  border-radius: 8px;
+  background: rgba(9, 13, 19, 0.9);
+  padding: 12px;
+}
+
+.life-crypto-badges span {
+  border: 1px solid rgba(122, 162, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(122, 162, 255, 0.08);
+  color: #dce6ff;
+  padding: 7px 10px;
+}
+
+.life-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  background: transparent;
+}
+
+.life-analysis-card {
+  min-height: 170px;
+  border: 1px solid rgba(83, 101, 126, 0.34);
+  border-radius: 8px;
+  background: rgba(13, 19, 29, 0.86);
+}
+
+.life-card-head strong {
+  color: #f5f8ff;
+}
+
+.life-analysis-card p {
+  color: #aeb8c8;
+}
+
+.life-score {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(143, 155, 173, 0.16);
+}
+
 .empty,
 .waiting-row {
   color: var(--text-helper);
@@ -1862,6 +2571,27 @@ dd {
   .life-month-list {
     max-height: 320px;
   }
+
+  .life-market-shell,
+  .life-month-panel,
+  .life-crypto-badges,
+  .life-analysis-grid {
+    min-width: 0;
+  }
+
+  .life-hero,
+  .life-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .life-metric-grid,
+  .life-analysis-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .life-command-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -1969,6 +2699,35 @@ dd {
 
   .life-analysis-grid {
     grid-template-columns: 1fr;
+  }
+
+  .life-market-shell,
+  .life-month-panel,
+  .life-crypto-badges,
+  .life-analysis-grid {
+    min-width: 0;
+  }
+
+  .life-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .life-title-stack h2 {
+    font-size: 40px;
+  }
+
+  .life-chart-toolbar span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .life-hero-ticker {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .life-hero-ticker strong {
+    font-size: 58px;
   }
 
   .yao-row,

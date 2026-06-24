@@ -154,6 +154,13 @@ function setModeView(mode, type, payload = null) {
   }
 }
 
+function scrollLifeResultIntoView() {
+  requestAnimationFrame(() => {
+    const top = resultPanel.getBoundingClientRect().top + window.scrollY - 64;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  });
+}
+
 function renderWaiting() {
   setResultChrome("quantum");
   resultPanel.classList.add("is-waiting");
@@ -324,11 +331,11 @@ function isBetterLifePeak(point, best) {
 
 const LIFE_CHART = {
   width: 1120,
-  height: 430,
-  left: 56,
-  right: 74,
-  top: 34,
-  bottom: 58,
+  height: 500,
+  left: 62,
+  right: 82,
+  top: 44,
+  bottom: 66,
 };
 
 function lifeAxisLabel(point) {
@@ -338,25 +345,41 @@ function lifeAxisLabel(point) {
 function lifeChartScale(points) {
   const highs = points.map((point) => numericValue(point.high, point.score));
   const lows = points.map((point) => numericValue(point.low, point.score));
-  const rawMax = Math.max(100, ...highs);
-  const rawMin = Math.min(0, ...lows);
-  const padding = Math.max(10, (rawMax - rawMin) * 0.1);
-  const maxValue = Math.min(125, Math.max(rawMax + 8, Math.ceil((rawMax + padding) / 5) * 5));
-  const minValue = Math.max(-25, Math.min(rawMin - 5, Math.floor((rawMin - padding) / 5) * 5));
-  return { maxValue, minValue, spread: Math.max(1, maxValue - minValue) };
+  if (!highs.length || !lows.length) {
+    return { maxValue: 100, minValue: 0, spread: 100, ticks: [0, 25, 50, 75, 100] };
+  }
+  const rawMax = Math.max(...highs);
+  const rawMin = Math.min(...lows);
+  const actualSpread = Math.max(1, rawMax - rawMin);
+  const minVisualSpread = points.length <= 24 ? 16 : 34;
+  const visualSpread = Math.max(minVisualSpread, actualSpread * 1.18);
+  const center = (rawMax + rawMin) / 2;
+  const maxValue = Math.min(112, Math.ceil((center + visualSpread / 2) / 5) * 5);
+  const minValue = Math.max(-12, Math.floor((center - visualSpread / 2) / 5) * 5);
+  const spread = Math.max(1, maxValue - minValue);
+  const tickCount = 5;
+  const tickStep = spread / (tickCount - 1);
+  const ticks = Array.from({ length: tickCount }, (_, index) => Math.round((minValue + tickStep * index) / 5) * 5);
+  return { maxValue, minValue, spread, ticks: [...new Set(ticks)] };
 }
 
 function buildLifeChartSvg(points, options = {}) {
   const { width, height, left, right, top, bottom } = LIFE_CHART;
   const innerWidth = width - left - right;
   const innerHeight = height - top - bottom;
-  const { maxValue, spread } = lifeChartScale(points);
+  const { maxValue, spread, ticks } = lifeChartScale(points);
   const y = (value) => top + ((maxValue - value) / spread) * innerHeight;
   const step = innerWidth / Math.max(1, points.length - 1);
-  const bodyWidth = Math.max(3, Math.min(points.length <= 24 ? 18 : 8, step * 0.58));
-  const gridLines = [0, 20, 40, 60, 80, 100];
+  const bodyWidth = Math.max(points.length <= 24 ? 8 : 4, Math.min(points.length <= 24 ? 22 : 10, step * 0.68));
   const period = options.period || "year";
   const xTickY = height - 8;
+  const closePath = points
+    .map((point, index) => {
+      const command = index === 0 ? "M" : "L";
+      const x = left + index * step;
+      return `${command}${x.toFixed(2)},${y(numericValue(point.close, point.score)).toFixed(2)}`;
+    })
+    .join(" ");
 
   const candles = points
     .map((point, index) => {
@@ -368,7 +391,7 @@ function buildLifeChartSvg(points, options = {}) {
       const isUp = close >= open;
       const color = isUp ? "#42be65" : "#fa4d56";
       const bodyTop = Math.min(y(open), y(close));
-      const bodyHeight = Math.max(2, Math.abs(y(open) - y(close)));
+      const bodyHeight = Math.max(points.length <= 24 ? 5 : 3.5, Math.abs(y(open) - y(close)));
       return `
         <g class="life-candle" data-age="${escapeHtml(point.age)}" data-year="${escapeHtml(point.year)}" data-month="${escapeHtml(
           point.monthName || "",
@@ -387,7 +410,7 @@ function buildLifeChartSvg(points, options = {}) {
     })
     .join("");
 
-  const grid = gridLines
+  const grid = ticks
     .map((value) => {
       const gy = y(value);
       return `
@@ -403,6 +426,7 @@ function buildLifeChartSvg(points, options = {}) {
       <g class="life-grid">${grid}</g>
       <line class="life-axis" x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}" />
       <line class="life-axis" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}" />
+      <path class="life-close-line" d="${closePath}" />
       <g class="life-candles">${candles}</g>
       <g class="life-crosshair" data-life-crosshair hidden>
         <line class="life-crosshair-line life-crosshair-x" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}" />
@@ -648,6 +672,11 @@ function renderLifeWaiting() {
         <span>L <strong>--</strong></span>
         <span>C <strong>--</strong></span>
       </div>
+      <div class="life-pulse-strip">
+        <span>PEAK <strong>--</strong></span>
+        <span>LOW <strong>--</strong></span>
+        <span>RANGE <strong>--</strong></span>
+      </div>
     </div>
     <div class="life-trading-layout">
       <section class="life-chart-panel" aria-label="人生K线生成中">
@@ -706,102 +735,126 @@ function renderLifeKline(result) {
     ? `${dayMaster.dayStem || ""}${dayMaster.dayElement || ""}${dayMaster.strengthLevel} · 财星${wealthProfile.wealthElement || "-"} · ${wealthProfile.wealthReadiness || "-"}`
     : "-";
   const peak = points.reduce((best, point) => (isBetterLifePeak(point, best) ? point : best), null);
+  const trough = points.reduce((worst, point) => (!worst || numericValue(point.low, point.score) < numericValue(worst.low, worst.score) ? point : worst), null);
   const first = points[0] || {};
   const last = points[points.length - 1] || {};
+  const chartHigh = points.length ? Math.max(...points.map((point) => numericValue(point.high, point.score))) : 0;
+  const chartLow = points.length ? Math.min(...points.map((point) => numericValue(point.low, point.score))) : 0;
+  const chartRange = chartHigh - chartLow;
+  const totalDelta = points.length ? numericValue(last.close, last.score) - numericValue(first.open, first.score) : 0;
+  const totalDeltaText = `${totalDelta > 0 ? "+" : ""}${totalDelta}`;
   const item = document.createElement("li");
   item.className = "life-kline-card";
   item.innerHTML = `
-    <div class="life-tv-header">
-      <div class="life-symbol-block">
-        <span>LIFEKLINE</span>
-        <strong>${escapeHtml(birth.name || "人生K线")}</strong>
-        <em>1Y</em>
-      </div>
-      <div class="life-bazi-strip">
-        <span>四柱</span>
-        <strong>${baziText}</strong>
-      </div>
-      <div class="life-ohlc-strip" aria-live="polite">
-        <span>Y <strong data-life-selected="year">${escapeHtml(first.year || "-")}</strong></span>
-        <span>O <strong data-life-selected="open">${escapeHtml(first.open || "-")}</strong></span>
-        <span>H <strong data-life-selected="high">${escapeHtml(first.high || "-")}</strong></span>
-        <span>L <strong data-life-selected="low">${escapeHtml(first.low || "-")}</strong></span>
-        <span>C <strong data-life-selected="close">${escapeHtml(first.close || "-")}</strong></span>
-        <span>Score <strong data-life-selected="score">${escapeHtml(first.score || "-")}</strong></span>
-      </div>
-    </div>
-    <div class="life-trading-layout">
-      <section class="life-chart-panel" aria-label="人生K线图表">
-        <div class="life-chart-toolbar">
-          <span>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")}</span>
-          <button type="button" class="is-active">1Y</button>
-          <button type="button">1M</button>
-          <button type="button">Bazi</button>
+    <div class="life-market-shell">
+      <section class="life-hero">
+        <div class="life-title-stack">
+          <span>LIFEKLINE / WEALTH MARKET</span>
+          <h2>${escapeHtml(birth.name || "人生K线")}</h2>
+          <p>${baziText}</p>
         </div>
-        ${buildLifeChartSvg(points)}
-        <div class="life-year-rail" aria-label="选择年份">${buildLifeYearRail(points)}</div>
-      </section>
-      <aside class="life-side-panel">
-        <div>
-          <span>四柱</span>
-          <strong>${baziText}</strong>
-        </div>
-        <div>
-          <span>大运</span>
-          <strong>${escapeHtml(dayun.direction || "-")}，${escapeHtml(dayun.startAge || "-")}岁起运，首运 ${escapeHtml(
-            dayun.firstDaYun || "-",
-          )}</strong>
-        </div>
-        <div class="life-core-panel">
-          <span>命局总纲</span>
+        <div class="life-hero-bazi">
+          <span>命局</span>
           <strong>${escapeHtml(
             dayMaster.strengthLevel
               ? `${dayMaster.dayStem || ""}${dayMaster.dayElement || ""}${dayMaster.strengthLevel} · ${patternHeadline}`
               : patternHeadline,
           )}</strong>
-          <p>${escapeHtml(dayMaster.strategy || "以日主、月令、格局和岁运合看。")}</p>
-          <p><b>喜</b>${escapeHtml(usefulGroups)} <b>忌</b>${escapeHtml(avoidGroups)}</p>
+          <p>${escapeHtml(wealthHeadline)}</p>
         </div>
-        <div>
-          <span>财运结构</span>
-          <strong>${escapeHtml(wealthHeadline)}</strong>
-          <p>${escapeHtml(wealthStructures)}</p>
+        <div class="life-hero-ticker" aria-live="polite">
+          <span data-life-selected="year">${escapeHtml(first.year || "-")}</span>
+          <strong data-life-selected="close">${escapeHtml(first.close || "-")}</strong>
+          <em>Score <b data-life-selected="score">${escapeHtml(first.score || "-")}</b></em>
         </div>
-        <div>
-          <span>刑冲合会</span>
-          <strong>${escapeHtml(relationSummary)}</strong>
-        </div>
-        <div>
+      </section>
+
+      <div class="life-metric-grid">
+        <article>
           <span>年度峰值</span>
-          <strong>${peak ? `${escapeHtml(peak.year)}年 ${escapeHtml(peak.ganZhi)}，${escapeHtml(peak.age)}岁` : "-"}</strong>
-        </div>
-        <div class="life-selected-panel">
-          <span>选中年份</span>
-          <strong data-life-selected="delta">${first.year ? lifePointText(first) : "-"}</strong>
-          <p><b data-life-selected="daYun">${escapeHtml(first.daYun || "-")}</b> · <b data-life-selected="ganZhi">${escapeHtml(
-            first.ganZhi || "-",
-          )}</b></p>
-          <p data-life-selected="reason">${escapeHtml(first.reason || "移动鼠标或点击横轴选择年份。")}</p>
-        </div>
-      </aside>
-    </div>
-    <section class="life-month-panel" data-life-month-panel aria-label="选中年份的流月K线">
-      <div class="life-month-head">
-        <div>
-          <span>WEALTH MONTHS</span>
-          <strong>选择年线后显示 12 个财运节气月</strong>
-        </div>
-        <em>${escapeHtml(monthKline.yearPreserving ? "财运月K聚合=年K" : "等待财运月K校验")}</em>
+          <strong>${peak ? `${escapeHtml(peak.year)} · ${escapeHtml(peak.ganZhi)}` : "-"}</strong>
+          <p>${peak ? `${escapeHtml(peak.age)}岁 / score ${escapeHtml(peak.score)}` : "-"}</p>
+        </article>
+        <article>
+          <span>深度回撤</span>
+          <strong>${trough ? `${escapeHtml(trough.year)} · ${escapeHtml(trough.ganZhi)}` : "-"}</strong>
+          <p>${trough ? `${escapeHtml(trough.age)}岁 / low ${escapeHtml(trough.low)}` : "-"}</p>
+        </article>
+        <article>
+          <span>周期振幅</span>
+          <strong>${escapeHtml(chartRange)}</strong>
+          <p>High ${escapeHtml(chartHigh)} / Low ${escapeHtml(chartLow)}</p>
+        </article>
+        <article>
+          <span>百年收盘</span>
+          <strong>${escapeHtml(totalDeltaText)}</strong>
+          <p>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")}</p>
+        </article>
       </div>
-    </section>
-    <div class="life-crypto-badges">
-      <span>暴富流年：${escapeHtml(analysis.cryptoYear || "待定")}</span>
-      <span>交易风格：${escapeHtml(analysis.cryptoStyle || "稳健低杠杆")}</span>
-      <span>${escapeHtml(model.deterministic === false ? "模型年线" : "年线确定性后端")}</span>
-      <span>算法：${escapeHtml(engineVersion)}</span>
-      <span>${escapeHtml(monthKline.yearPreserving ? "月线聚合=年线" : "月线待校验")}</span>
-    </div>
-    <div class="life-analysis-grid">${renderLifeAnalysisCards(analysis)}</div>`;
+
+      <div class="life-main-grid">
+        <section class="life-chart-panel life-chart-stage" aria-label="人生K线图表">
+          <div class="life-chart-toolbar">
+            <span>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")} · Wealth OHLC</span>
+            <button type="button" class="is-active">1Y</button>
+            <button type="button">1M</button>
+            <button type="button">Bazi</button>
+          </div>
+          <div class="life-chart-frame">${buildLifeChartSvg(points)}</div>
+          <div class="life-year-rail" aria-label="选择年份">${buildLifeYearRail(points)}</div>
+        </section>
+
+        <aside class="life-side-panel life-command-panel">
+          <div class="life-selected-panel">
+            <span>选中年份</span>
+            <strong data-life-selected="delta">${first.year ? lifePointText(first) : "-"}</strong>
+            <p><b data-life-selected="daYun">${escapeHtml(first.daYun || "-")}</b> · <b data-life-selected="ganZhi">${escapeHtml(
+              first.ganZhi || "-",
+            )}</b></p>
+            <p data-life-selected="reason">${escapeHtml(first.reason || "年度财运结构。")}</p>
+            <div class="life-ohlc-strip" aria-live="polite">
+              <span>O <strong data-life-selected="open">${escapeHtml(first.open || "-")}</strong></span>
+              <span>H <strong data-life-selected="high">${escapeHtml(first.high || "-")}</strong></span>
+              <span>L <strong data-life-selected="low">${escapeHtml(first.low || "-")}</strong></span>
+              <span>C <strong data-life-selected="close">${escapeHtml(first.close || "-")}</strong></span>
+            </div>
+          </div>
+          <div>
+            <span>大运</span>
+            <strong>${escapeHtml(dayun.direction || "-")}，${escapeHtml(dayun.startAge || "-")}岁起运</strong>
+            <p>首运 ${escapeHtml(dayun.firstDaYun || "-")}</p>
+          </div>
+          <div class="life-core-panel">
+            <span>喜忌</span>
+            <strong><b>喜</b>${escapeHtml(usefulGroups)} <b>忌</b>${escapeHtml(avoidGroups)}</strong>
+            <p>${escapeHtml(dayMaster.strategy || "以日主、月令、格局和岁运合看。")}</p>
+          </div>
+          <div>
+            <span>财运结构</span>
+            <strong>${escapeHtml(wealthStructures)}</strong>
+            <p>${escapeHtml(relationSummary)}</p>
+          </div>
+        </aside>
+      </div>
+
+      <section class="life-month-panel" data-life-month-panel aria-label="选中年份的流月K线">
+        <div class="life-month-head">
+          <div>
+            <span>WEALTH MONTHS</span>
+            <strong>流月节气分布</strong>
+          </div>
+          <em>${escapeHtml(monthKline.yearPreserving ? "财运月K聚合=年K" : "月线待校验")}</em>
+        </div>
+      </section>
+      <div class="life-crypto-badges">
+        <span>暴富流年：${escapeHtml(analysis.cryptoYear || "待定")}</span>
+        <span>交易风格：${escapeHtml(analysis.cryptoStyle || "稳健低杠杆")}</span>
+        <span>${escapeHtml(model.deterministic === false ? "模型年线" : "年线确定性后端")}</span>
+        <span>算法：${escapeHtml(engineVersion)}</span>
+        <span>${escapeHtml(monthKline.yearPreserving ? "月线聚合=年线" : "月线待校验")}</span>
+      </div>
+      <div class="life-analysis-grid">${renderLifeAnalysisCards(analysis)}</div>
+    </div>`;
   yaoList.appendChild(item);
   setupLifeChartInteraction(item, points, monthPoints);
 }
@@ -1044,6 +1097,7 @@ async function submitLifeKline() {
       job_id: "life-kline",
     });
     setModeView("life", "lifeResult", data.result);
+    scrollLifeResultIntoView();
   } catch (error) {
     setModeStatus("life", { status: "ERROR", status_label: "出错", backend: "Gemini API", job_id: "-" });
     setModeView("life", "error", { error: error instanceof TypeError ? backendUnavailableMessage : String(error) });

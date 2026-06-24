@@ -342,7 +342,7 @@ SIX_SPIRIT_START_BY_DAY_STEM = {
 
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
-LIFE_KLINE_ENGINE_VERSION = "wealth-v3.3-deterministic-peak-label"
+LIFE_KLINE_ENGINE_VERSION = "wealth-v3.4-market-dashboard-range"
 ACTIVE_STATUSES = {
     "CREATED",
     "CONNECTING",
@@ -1972,8 +1972,8 @@ def generate_backend_life_chart(
         natal_base -= 8
     if "身强可任财" in wealth_profile["structures"]:
         natal_base += 5
-    previous_close = clamp_life_value(natal_base, 4, 96)
-    points: list[dict[str, Any]] = []
+
+    raw_years: list[dict[str, Any]] = []
     for age in range(1, 101):
         year = birth_year + age - 1
         gan_zhi = GANZHI[(year - 1984) % 60]
@@ -1982,19 +1982,99 @@ def generate_backend_life_chart(
         dayun_influence = None if da_yun == "童限" else flow_wealth_influence(bazi, wealth_context, da_yun)
         dayun_score = 0.0 if dayun_influence is None else float(dayun_influence["score"])
         flow_score = float(year_influence["score"])
-        age_curve = -8 if age <= 16 else 2 if age <= 28 else 7 if age <= 48 else 5 if age <= 62 else 0 if age <= 78 else -5
-        wave = math.sin((age + GANZHI.index(bazi[2])) / 5.2) * 3.5
-        close = clamp_life_value(natal_base + (dayun_score * 1.55) + (flow_score * 1.05) + age_curve + wave, 4, 96)
-        open_value = previous_close
-        volatility = min(
-            24,
-            5
-            + abs(close - open_value) * 0.32
-            + float(year_influence.get("volatility", 4.0)) * 0.55
-            + (0 if dayun_influence is None else float(dayun_influence.get("volatility", 4.0)) * 0.22),
+        if age <= 16:
+            age_curve = -12
+        elif age <= 28:
+            age_curve = 1
+        elif age <= 45:
+            age_curve = 9
+        elif age <= 60:
+            age_curve = 7
+        elif age <= 75:
+            age_curve = 1
+        else:
+            age_curve = -8
+        year_event = str(year_influence["event"])
+        event_tilt = {
+            "财星引动": 8.0,
+            "财星藏支": 4.5,
+            "食伤生财": 7.0,
+            "输出蓄财": 5.0,
+            "财局/财库动": 10.0,
+            "官杀管财": -4.5,
+            "规则伏财": -2.5,
+            "比劫夺财": -9.0,
+            "暗比争财": -6.5,
+            "财星压身": -7.0,
+            "印星护财": 1.5,
+            "比劫助身": 2.5,
+        }.get(year_event, 0.0)
+        signal_count = len(year_influence.get("signals", []))
+        relation_shock = min(10.0, signal_count * 1.65)
+        if any("冲" in signal or "刑" in signal or "害" in signal for signal in year_influence.get("signals", [])):
+            relation_shock *= -1.0
+        decade_wave = math.sin((age + GANZHI.index(bazi[2])) / 4.1) * 6.0
+        long_wave = math.cos((age + STEMS.index(bazi[2][0]) * 2) / 9.5) * 5.0
+        raw_close = natal_base + (dayun_score * 2.45) + (flow_score * 2.05) + age_curve + decade_wave + long_wave + event_tilt + relation_shock
+        raw_volatility = (
+            7.0
+            + abs(dayun_score) * 0.48
+            + abs(flow_score) * 0.9
+            + float(year_influence.get("volatility", 4.0)) * 0.72
+            + (0.0 if dayun_influence is None else float(dayun_influence.get("volatility", 4.0)) * 0.36)
+            + abs(event_tilt) * 0.28
+            + abs(relation_shock) * 0.34
         )
-        high = clamp_life_value(max(open_value, close) + volatility)
-        low = clamp_life_value(min(open_value, close) - (volatility * 0.8))
+        raw_years.append(
+            {
+                "age": age,
+                "year": year,
+                "ganZhi": gan_zhi,
+                "daYun": da_yun,
+                "yearInfluence": year_influence,
+                "dayunInfluence": dayun_influence,
+                "rawClose": raw_close,
+                "rawVolatility": raw_volatility,
+            }
+        )
+
+    raw_values = [float(item["rawClose"]) for item in raw_years]
+    raw_mean = sum(raw_values) / len(raw_values)
+    raw_range = max(raw_values) - min(raw_values)
+    target_mid = max(36.0, min(66.0, 50.0 + ((natal_base - 52.0) * 0.68)))
+    target_spread = min(78.0, max(48.0, raw_range * 1.35))
+
+    closes: list[int] = []
+    for item in raw_years:
+        if raw_range < 0.01:
+            normalized = math.sin(float(item["age"]) / 4.0) * (target_spread * 0.22)
+        else:
+            normalized = ((float(item["rawClose"]) - raw_mean) / raw_range) * target_spread
+        closes.append(clamp_life_value(target_mid + normalized, 4, 96))
+
+    close_min = min(closes)
+    close_max = max(closes)
+    if close_max - close_min < 36:
+        close_mid = sum(closes) / len(closes)
+        factor = 36 / max(1, close_max - close_min)
+        closes = [clamp_life_value(close_mid + ((close - close_mid) * factor), 4, 96) for close in closes]
+
+    first_momentum = closes[1] - closes[0] if len(closes) > 1 else 0
+    previous_close = clamp_life_value(closes[0] - (first_momentum * 0.45), 4, 96)
+    points: list[dict[str, Any]] = []
+    for item, close in zip(raw_years, closes):
+        age = int(item["age"])
+        year = int(item["year"])
+        gan_zhi = str(item["ganZhi"])
+        da_yun = str(item["daYun"])
+        year_influence = item["yearInfluence"]
+        dayun_influence = item["dayunInfluence"]
+        open_value = previous_close
+        volatility = min(34.0, float(item["rawVolatility"]) + abs(close - open_value) * 0.45)
+        upper_wick = volatility * (0.58 + ((age % 5) * 0.08))
+        lower_wick = volatility * (0.52 + (((age + 2) % 5) * 0.07))
+        high = clamp_life_value(max(open_value, close) + upper_wick)
+        low = clamp_life_value(min(open_value, close) - lower_wick)
         points.append(
             {
                 "age": age,
