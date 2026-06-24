@@ -18,6 +18,8 @@ const backendText = document.querySelector("#backendText");
 const jobText = document.querySelector("#jobText");
 const yaoList = document.querySelector("#yaoList");
 const resultTitleText = document.querySelector(".result-title span");
+const resultToolbarPrimary = document.querySelector(".result-toolbar span:first-child");
+const resultToolbarSecondary = document.querySelector(".result-toolbar span:last-child");
 const panelTitle = document.querySelector("#panelTitle");
 const liveDot = document.querySelector("#liveDot");
 const resultPanel = document.querySelector(".result-panel");
@@ -44,6 +46,13 @@ let isRunning = false;
 let toastTimer = null;
 const yaoNames = ["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"];
 
+function setResultChrome(mode) {
+  const isLife = mode === "life";
+  resultPanel.classList.toggle("life-terminal", isLife);
+  resultToolbarPrimary.textContent = isLife ? "LIFE KLINE" : "Measurement result";
+  resultToolbarSecondary.textContent = isLife ? "OHLC · 1Y" : "Bottom to top";
+}
+
 function pad2(value) {
   return String(value).padStart(2, "0");
 }
@@ -65,10 +74,11 @@ function setStatus(job) {
 }
 
 function renderWaiting() {
+  setResultChrome("quantum");
   resultPanel.classList.add("is-waiting");
   waitHint.hidden = false;
   resultTitleText.textContent = "等待量子结果：";
-  yaoList.classList.remove("chart-mode");
+  yaoList.classList.remove("chart-mode", "life-mode");
   yaoList.innerHTML = "";
   yaoNames.forEach((name) => {
     const item = document.createElement("li");
@@ -78,11 +88,12 @@ function renderWaiting() {
   });
 }
 
-function renderError(job) {
+function renderError(job, mode = "quantum") {
+  setResultChrome(mode);
   resultPanel.classList.remove("is-waiting");
   waitHint.hidden = true;
-  resultTitleText.textContent = "运行结果：";
-  yaoList.classList.remove("chart-mode");
+  resultTitleText.textContent = mode === "life" ? "人生K线错误：" : "运行结果：";
+  yaoList.classList.remove("chart-mode", "life-mode");
   yaoList.innerHTML = "";
   const item = document.createElement("li");
   item.className = "empty";
@@ -182,6 +193,7 @@ function renderChart(result) {
 }
 
 function renderResult(result) {
+  setResultChrome("quantum");
   resultPanel.classList.remove("is-waiting");
   waitHint.hidden = true;
   yaoList.innerHTML = "";
@@ -220,13 +232,17 @@ function numericValue(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+const LIFE_CHART = {
+  width: 1120,
+  height: 430,
+  left: 56,
+  right: 74,
+  top: 34,
+  bottom: 58,
+};
+
 function buildLifeChartSvg(points) {
-  const width = 980;
-  const height = 340;
-  const left = 46;
-  const right = 18;
-  const top = 24;
-  const bottom = 42;
+  const { width, height, left, right, top, bottom } = LIFE_CHART;
   const innerWidth = width - left - right;
   const innerHeight = height - top - bottom;
   const highs = points.map((point) => numericValue(point.high, point.score));
@@ -237,7 +253,7 @@ function buildLifeChartSvg(points) {
   const y = (value) => top + ((maxValue - value) / spread) * innerHeight;
   const step = innerWidth / Math.max(1, points.length - 1);
   const bodyWidth = Math.max(3, Math.min(8, step * 0.58));
-  const gridLines = [0, 25, 50, 75, 100];
+  const gridLines = [0, 20, 40, 60, 80, 100];
 
   const candles = points
     .map((point, index) => {
@@ -262,7 +278,7 @@ function buildLifeChartSvg(points) {
     .map((point, index) => {
       if (index % 10 !== 0 && index !== points.length - 1) return "";
       const x = left + index * step;
-      return `<text x="${x.toFixed(2)}" y="${height - 15}" text-anchor="middle">${escapeHtml(point.age)}岁</text>`;
+      return `<text x="${x.toFixed(2)}" y="${height - 18}" text-anchor="middle">${escapeHtml(point.year)}</text>`;
     })
     .join("");
 
@@ -271,18 +287,122 @@ function buildLifeChartSvg(points) {
       const gy = y(value);
       return `
         <line x1="${left}" y1="${gy.toFixed(2)}" x2="${width - right}" y2="${gy.toFixed(2)}" />
-        <text x="${left - 10}" y="${(gy + 4).toFixed(2)}" text-anchor="end">${value}</text>`;
+        <text x="${width - right + 12}" y="${(gy + 4).toFixed(2)}">${value}</text>`;
     })
     .join("");
 
   return `
-    <svg class="life-chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="人生K线图">
+    <svg class="life-chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="人生K线图，可用鼠标沿横轴选择年份">
       <g class="life-grid">${grid}</g>
       <line class="life-axis" x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}" />
       <line class="life-axis" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}" />
       <g class="life-candles">${candles}</g>
+      <g class="life-crosshair" data-life-crosshair hidden>
+        <line class="life-crosshair-line life-crosshair-x" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}" />
+        <line class="life-crosshair-line life-crosshair-y" x1="${left}" y1="${top}" x2="${width - right}" y2="${top}" />
+        <circle class="life-selected-dot" cx="${left}" cy="${top}" r="5" />
+        <rect class="life-axis-label-bg" x="${left - 28}" y="${height - bottom + 9}" width="64" height="24" rx="3" />
+        <text class="life-axis-label" x="${left + 4}" y="${height - bottom + 26}" text-anchor="middle"></text>
+        <rect class="life-price-label-bg" x="${width - right + 8}" y="${top - 12}" width="46" height="24" rx="3" />
+        <text class="life-price-label" x="${width - right + 31}" y="${top + 5}" text-anchor="middle"></text>
+      </g>
       <g class="life-xaxis">${xTicks}</g>
+      <rect class="life-hit-area" x="${left}" y="${top}" width="${innerWidth}" height="${innerHeight}" />
     </svg>`;
+}
+
+function buildLifeYearRail(points) {
+  return points
+    .map((point, index) => {
+      if (index % 5 !== 0 && index !== points.length - 1) return "";
+      return `<button type="button" data-life-year-index="${index}">${escapeHtml(point.year)}</button>`;
+    })
+    .join("");
+}
+
+function lifePointText(point) {
+  if (!point) return "-";
+  const delta = numericValue(point.close) - numericValue(point.open);
+  const sign = delta > 0 ? "+" : "";
+  return `${escapeHtml(point.year)} · ${escapeHtml(point.ganZhi)} · ${escapeHtml(point.age)}岁 · ${sign}${delta}`;
+}
+
+function updateLifeSelection(card, points, index, lock = false) {
+  if (!points.length) return;
+  const safeIndex = Math.max(0, Math.min(points.length - 1, index));
+  const point = points[safeIndex];
+  const { width, height, left, right, top, bottom } = LIFE_CHART;
+  const innerWidth = width - left - right;
+  const innerHeight = height - top - bottom;
+  const step = innerWidth / Math.max(1, points.length - 1);
+  const x = left + safeIndex * step;
+  const y = top + ((100 - numericValue(point.close, point.score)) / 100) * innerHeight;
+  const labelX = Math.max(left + 32, Math.min(width - right - 32, x));
+  const priceY = Math.max(top + 12, Math.min(height - bottom - 12, y));
+  const crosshair = card.querySelector("[data-life-crosshair]");
+
+  if (lock) {
+    card.dataset.lockedIndex = String(safeIndex);
+  }
+  card.querySelectorAll("[data-life-selected]").forEach((node) => {
+    const key = node.dataset.lifeSelected;
+    const value = {
+      year: point.year,
+      age: `${point.age}岁`,
+      ganZhi: point.ganZhi,
+      daYun: point.daYun,
+      open: point.open,
+      high: point.high,
+      low: point.low,
+      close: point.close,
+      score: point.score,
+      delta: lifePointText(point),
+      reason: point.reason,
+    }[key];
+    node.textContent = value ?? "-";
+  });
+  card.querySelectorAll("[data-life-year-index]").forEach((button) => {
+    button.classList.toggle("is-selected", Number(button.dataset.lifeYearIndex) === safeIndex);
+  });
+
+  if (!crosshair) return;
+  crosshair.removeAttribute("hidden");
+  crosshair.querySelector(".life-crosshair-x").setAttribute("x1", x.toFixed(2));
+  crosshair.querySelector(".life-crosshair-x").setAttribute("x2", x.toFixed(2));
+  crosshair.querySelector(".life-crosshair-y").setAttribute("y1", y.toFixed(2));
+  crosshair.querySelector(".life-crosshair-y").setAttribute("y2", y.toFixed(2));
+  crosshair.querySelector(".life-selected-dot").setAttribute("cx", x.toFixed(2));
+  crosshair.querySelector(".life-selected-dot").setAttribute("cy", y.toFixed(2));
+  crosshair.querySelector(".life-axis-label-bg").setAttribute("x", (labelX - 32).toFixed(2));
+  crosshair.querySelector(".life-axis-label").setAttribute("x", labelX.toFixed(2));
+  crosshair.querySelector(".life-axis-label").textContent = point.year;
+  crosshair.querySelector(".life-price-label-bg").setAttribute("y", (priceY - 12).toFixed(2));
+  crosshair.querySelector(".life-price-label").setAttribute("y", (priceY + 5).toFixed(2));
+  crosshair.querySelector(".life-price-label").textContent = point.close;
+}
+
+function setupLifeChartInteraction(card, points) {
+  if (!points.length) return;
+  const svg = card.querySelector(".life-chart-svg");
+  const yearButtons = card.querySelectorAll("[data-life-year-index]");
+  const indexFromEvent = (event) => {
+    const rect = svg.getBoundingClientRect();
+    const rawX = ((event.clientX - rect.left) / rect.width) * LIFE_CHART.width;
+    const step = (LIFE_CHART.width - LIFE_CHART.left - LIFE_CHART.right) / Math.max(1, points.length - 1);
+    return Math.round((rawX - LIFE_CHART.left) / step);
+  };
+  const peakIndex = points.reduce(
+    (bestIndex, point, index) => (numericValue(point.high) > numericValue(points[bestIndex]?.high) ? index : bestIndex),
+    0,
+  );
+
+  updateLifeSelection(card, points, peakIndex, true);
+  svg.addEventListener("pointermove", (event) => updateLifeSelection(card, points, indexFromEvent(event)));
+  svg.addEventListener("click", (event) => updateLifeSelection(card, points, indexFromEvent(event), true));
+  svg.addEventListener("pointerleave", () => updateLifeSelection(card, points, Number(card.dataset.lockedIndex || peakIndex)));
+  yearButtons.forEach((button) => {
+    button.addEventListener("click", () => updateLifeSelection(card, points, Number(button.dataset.lifeYearIndex), true));
+  });
 }
 
 function renderLifeAnalysisCards(analysis) {
@@ -314,13 +434,61 @@ function renderLifeAnalysisCards(analysis) {
     .join("");
 }
 
+function renderLifeWaiting() {
+  setResultChrome("life");
+  resultPanel.classList.add("is-waiting");
+  waitHint.hidden = false;
+  resultTitleText.textContent = "人生K线 · 生成中";
+  yaoList.innerHTML = "";
+  yaoList.classList.add("life-mode");
+  yaoList.classList.remove("chart-mode");
+  const item = document.createElement("li");
+  item.className = "life-kline-card life-loading-card";
+  item.innerHTML = `
+    <div class="life-tv-header">
+      <div class="life-symbol-block">
+        <span>LIFEKLINE</span>
+        <strong>正在生成</strong>
+        <em>1Y</em>
+      </div>
+      <div class="life-ohlc-strip">
+        <span>Y <strong>--</strong></span>
+        <span>O <strong>--</strong></span>
+        <span>H <strong>--</strong></span>
+        <span>L <strong>--</strong></span>
+        <span>C <strong>--</strong></span>
+      </div>
+    </div>
+    <div class="life-trading-layout">
+      <section class="life-chart-panel" aria-label="人生K线生成中">
+        <div class="life-chart-toolbar">
+          <span>loading market series</span>
+          <button type="button" class="is-active">1Y</button>
+          <button type="button">OHLC</button>
+          <button type="button">Bazi</button>
+        </div>
+        <div class="life-chart-loader" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+      <aside class="life-side-panel">
+        <div><span>四柱</span><strong class="life-skeleton-text"></strong></div>
+        <div><span>大运</span><strong class="life-skeleton-text short"></strong></div>
+        <div><span>选中年份</span><strong>等待后端生成 OHLC</strong></div>
+      </aside>
+    </div>`;
+  yaoList.appendChild(item);
+}
+
 function renderLifeKline(result) {
+  setResultChrome("life");
   resultPanel.classList.remove("is-waiting");
   waitHint.hidden = true;
   yaoList.innerHTML = "";
   yaoList.classList.add("life-mode");
   yaoList.classList.remove("chart-mode");
-  resultTitleText.textContent = "人生K线结果：";
+  resultTitleText.textContent = "人生K线 · 年线图";
 
   const birth = result.birthInfo || {};
   const analysis = result.analysis || {};
@@ -328,32 +496,69 @@ function renderLifeKline(result) {
   const dayun = birth.dayun || {};
   const bazi = Array.isArray(birth.bazi) ? birth.bazi : analysis.bazi || [];
   const peak = points.reduce((best, point) => (numericValue(point.high) > numericValue(best?.high) ? point : best), null);
+  const first = points[0] || {};
+  const last = points[points.length - 1] || {};
   const item = document.createElement("li");
   item.className = "life-kline-card";
   item.innerHTML = `
-    <div class="life-summary-board">
-      <div>
-        <span>四柱</span>
-        <strong>${bazi.map(escapeHtml).join("　")}</strong>
+    <div class="life-tv-header">
+      <div class="life-symbol-block">
+        <span>LIFEKLINE</span>
+        <strong>${escapeHtml(birth.name || "人生K线")}</strong>
+        <em>1Y</em>
       </div>
-      <div>
-        <span>大运</span>
-        <strong>${escapeHtml(dayun.direction || "-")}，${escapeHtml(dayun.startAge || "-")}岁起运，首运 ${escapeHtml(
-          dayun.firstDaYun || "-",
-        )}</strong>
-      </div>
-      <div>
-        <span>人生峰值</span>
-        <strong>${peak ? `${escapeHtml(peak.year)}年 ${escapeHtml(peak.ganZhi)}，${escapeHtml(peak.age)}岁` : "-"}</strong>
+      <div class="life-ohlc-strip" aria-live="polite">
+        <span>Y <strong data-life-selected="year">${escapeHtml(first.year || "-")}</strong></span>
+        <span>O <strong data-life-selected="open">${escapeHtml(first.open || "-")}</strong></span>
+        <span>H <strong data-life-selected="high">${escapeHtml(first.high || "-")}</strong></span>
+        <span>L <strong data-life-selected="low">${escapeHtml(first.low || "-")}</strong></span>
+        <span>C <strong data-life-selected="close">${escapeHtml(first.close || "-")}</strong></span>
+        <span>Score <strong data-life-selected="score">${escapeHtml(first.score || "-")}</strong></span>
       </div>
     </div>
-    ${buildLifeChartSvg(points)}
+    <div class="life-trading-layout">
+      <section class="life-chart-panel" aria-label="人生K线图表">
+        <div class="life-chart-toolbar">
+          <span>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")}</span>
+          <button type="button" class="is-active">1Y</button>
+          <button type="button">OHLC</button>
+          <button type="button">Bazi</button>
+        </div>
+        ${buildLifeChartSvg(points)}
+        <div class="life-year-rail" aria-label="选择年份">${buildLifeYearRail(points)}</div>
+      </section>
+      <aside class="life-side-panel">
+        <div>
+          <span>四柱</span>
+          <strong>${bazi.map(escapeHtml).join("　")}</strong>
+        </div>
+        <div>
+          <span>大运</span>
+          <strong>${escapeHtml(dayun.direction || "-")}，${escapeHtml(dayun.startAge || "-")}岁起运，首运 ${escapeHtml(
+            dayun.firstDaYun || "-",
+          )}</strong>
+        </div>
+        <div>
+          <span>峰值</span>
+          <strong>${peak ? `${escapeHtml(peak.year)}年 ${escapeHtml(peak.ganZhi)}，${escapeHtml(peak.age)}岁` : "-"}</strong>
+        </div>
+        <div class="life-selected-panel">
+          <span>选中年份</span>
+          <strong data-life-selected="delta">${first.year ? lifePointText(first) : "-"}</strong>
+          <p><b data-life-selected="daYun">${escapeHtml(first.daYun || "-")}</b> · <b data-life-selected="ganZhi">${escapeHtml(
+            first.ganZhi || "-",
+          )}</b></p>
+          <p data-life-selected="reason">${escapeHtml(first.reason || "移动鼠标或点击横轴选择年份。")}</p>
+        </div>
+      </aside>
+    </div>
     <div class="life-crypto-badges">
       <span>暴富流年：${escapeHtml(analysis.cryptoYear || "待定")}</span>
       <span>交易风格：${escapeHtml(analysis.cryptoStyle || "稳健低杠杆")}</span>
     </div>
     <div class="life-analysis-grid">${renderLifeAnalysisCards(analysis)}</div>`;
   yaoList.appendChild(item);
+  setupLifeChartInteraction(item, points);
 }
 
 function setRunningControls(running, label = "起卦中") {
@@ -573,17 +778,7 @@ async function submitLifeKline() {
   statusText.textContent = "人生K线生成中";
   backendText.textContent = "Gemini API";
   jobText.textContent = "life-kline";
-  resultPanel.classList.add("is-waiting");
-  waitHint.hidden = false;
-  resultTitleText.textContent = "等待人生K线：";
-  yaoList.classList.remove("chart-mode", "life-mode");
-  yaoList.innerHTML = "";
-  yaoNames.forEach((name) => {
-    const item = document.createElement("li");
-    item.className = "waiting-row";
-    item.innerHTML = `<span class="yao-label">${name}：</span><span class="waiting-pill"></span>`;
-    yaoList.appendChild(item);
-  });
+  renderLifeWaiting();
 
   try {
     const response = await fetch(`${apiBase}/api/life-kline`, {
@@ -610,7 +805,7 @@ async function submitLifeKline() {
     renderLifeKline(data.result);
   } catch (error) {
     setStatus({ status: "ERROR", status_label: "出错", backend: "Gemini API", job_id: "-" });
-    renderError({ error: error instanceof TypeError ? backendUnavailableMessage : String(error) });
+    renderError({ error: error instanceof TypeError ? backendUnavailableMessage : String(error) }, "life");
   } finally {
     setLifeControls(false);
   }

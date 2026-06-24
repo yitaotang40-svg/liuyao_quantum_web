@@ -1026,6 +1026,308 @@ dd {
   stroke-width: 1;
 }
 
+.result-panel.life-terminal {
+  background:
+    linear-gradient(180deg, rgba(19, 23, 34, 0.98), rgba(10, 12, 16, 0.98)),
+    var(--layer-01);
+}
+
+.result-panel.life-terminal .processor-map {
+  display: none;
+}
+
+.result-panel.life-terminal .quantum-lines {
+  opacity: 0.28;
+}
+
+.result-panel.life-terminal .result-title {
+  width: calc(100% - 48px);
+  margin: 18px 24px 12px;
+  color: #d1d4dc;
+  font: 700 18px var(--mono);
+  letter-spacing: 0;
+}
+
+.result-panel.life-terminal .yao-list.life-mode {
+  width: calc(100% - 48px);
+  margin: 0 24px 48px;
+  gap: 0;
+  font-size: 14px;
+}
+
+.result-panel.life-terminal .result-toolbar {
+  border-color: rgba(42, 46, 57, 0.95);
+  background: #131722;
+  color: #787b86;
+}
+
+.result-panel.life-terminal .result-toolbar span:first-child {
+  color: #d1d4dc;
+}
+
+.life-kline-card {
+  gap: 0;
+  border: 1px solid #2a2e39;
+  background: #0f1117;
+  color: #d1d4dc;
+  box-shadow: none;
+  padding: 0;
+}
+
+.life-tv-header {
+  min-width: 980px;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2.2fr);
+  align-items: center;
+  border-bottom: 1px solid #2a2e39;
+  background: #131722;
+}
+
+.life-symbol-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  border-right: 1px solid #2a2e39;
+  padding: 10px 14px;
+}
+
+.life-symbol-block span,
+.life-chart-toolbar span,
+.life-side-panel span {
+  color: #787b86;
+  font: 700 11px var(--mono);
+  text-transform: uppercase;
+}
+
+.life-symbol-block strong {
+  color: #f0f3fa;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.life-symbol-block em,
+.life-chart-toolbar button,
+.life-year-rail button {
+  border: 1px solid #2a2e39;
+  border-radius: 2px;
+  background: #1e222d;
+  color: #d1d4dc;
+  font: 700 11px var(--mono);
+  font-style: normal;
+}
+
+.life-symbol-block em {
+  padding: 4px 7px;
+}
+
+.life-ohlc-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 10px 14px;
+  color: #787b86;
+  font: 12px var(--mono);
+}
+
+.life-ohlc-strip strong {
+  color: #22ab94;
+  font-weight: 700;
+}
+
+.life-trading-layout {
+  min-width: 980px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  min-height: 520px;
+}
+
+.life-chart-panel {
+  min-width: 0;
+  border-right: 1px solid #2a2e39;
+  background: #0f1117;
+}
+
+.life-chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border-bottom: 1px solid #2a2e39;
+  padding: 8px 12px;
+}
+
+.life-chart-toolbar span {
+  margin-right: auto;
+}
+
+.life-chart-toolbar button,
+.life-year-rail button {
+  min-width: 38px;
+  min-height: 28px;
+  padding: 0 9px;
+}
+
+.life-chart-toolbar button.is-active,
+.life-year-rail button.is-selected {
+  border-color: #2962ff;
+  background: rgba(41, 98, 255, 0.16);
+  color: #ffffff;
+}
+
+.life-chart-svg {
+  display: block;
+  min-width: 980px;
+  border: 0;
+  border-bottom: 1px solid #2a2e39;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 89px, rgba(42, 46, 57, 0.55) 90px),
+    repeating-linear-gradient(180deg, transparent 0 67px, rgba(42, 46, 57, 0.6) 68px),
+    #0f1117;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.life-grid line {
+  stroke: rgba(120, 123, 134, 0.28);
+  stroke-dasharray: none;
+}
+
+.life-grid text,
+.life-xaxis text {
+  fill: #787b86;
+  font: 12px var(--mono);
+}
+
+.life-axis {
+  stroke: rgba(120, 123, 134, 0.62);
+}
+
+.life-hit-area {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.life-crosshair[hidden] {
+  display: none;
+}
+
+.life-crosshair-line {
+  stroke: rgba(209, 212, 220, 0.72);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+}
+
+.life-selected-dot {
+  fill: #2962ff;
+  stroke: #ffffff;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.life-axis-label-bg,
+.life-price-label-bg {
+  fill: #2962ff;
+  pointer-events: none;
+}
+
+.life-axis-label,
+.life-price-label {
+  fill: #ffffff;
+  font: 700 12px var(--mono);
+  pointer-events: none;
+}
+
+.life-year-rail {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid #2a2e39;
+  padding: 10px 12px;
+}
+
+.life-side-panel {
+  display: grid;
+  align-content: start;
+  gap: 1px;
+  background: #2a2e39;
+}
+
+.life-side-panel > div {
+  display: grid;
+  gap: 8px;
+  min-height: 78px;
+  background: #131722;
+  padding: 14px;
+}
+
+.life-side-panel strong {
+  color: #f0f3fa;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.life-selected-panel {
+  min-height: 188px;
+}
+
+.life-selected-panel p {
+  margin: 0;
+  color: #d1d4dc;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.life-selected-panel b {
+  color: #22ab94;
+  font-weight: 700;
+}
+
+.life-chart-loader {
+  min-height: 430px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  align-items: end;
+  gap: 10px;
+  padding: 44px 22px 28px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 89px, rgba(42, 46, 57, 0.55) 90px),
+    repeating-linear-gradient(180deg, transparent 0 67px, rgba(42, 46, 57, 0.6) 68px),
+    #0f1117;
+}
+
+.life-chart-loader span {
+  min-height: 80px;
+  background: linear-gradient(180deg, rgba(34, 171, 148, 0.85), rgba(34, 171, 148, 0.22));
+  animation: lifeBars 1.25s ease-in-out infinite;
+}
+
+.life-chart-loader span:nth-child(2n) {
+  background: linear-gradient(180deg, rgba(242, 54, 69, 0.82), rgba(242, 54, 69, 0.22));
+}
+
+.life-chart-loader span:nth-child(3n) {
+  min-height: 180px;
+}
+
+.life-chart-loader span:nth-child(4n) {
+  min-height: 250px;
+}
+
+.life-skeleton-text {
+  display: block;
+  width: 86%;
+  height: 18px;
+  background: linear-gradient(90deg, #1e222d, #363a45, #1e222d);
+  background-size: 220% 100%;
+  animation: shimmer 1.35s ease-in-out infinite;
+}
+
+.life-skeleton-text.short {
+  width: 62%;
+}
+
 .life-crypto-badges {
   min-width: 820px;
   display: flex;
@@ -1241,6 +1543,18 @@ dd {
   }
 }
 
+@keyframes lifeBars {
+  0%,
+  100% {
+    transform: scaleY(0.72);
+    opacity: 0.48;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
 @keyframes scan {
   0%,
   100% {
@@ -1321,6 +1635,20 @@ dd {
   .result-panel {
     min-height: 560px;
   }
+
+  .life-trading-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .life-chart-panel {
+    border-right: 0;
+    border-bottom: 1px solid #2a2e39;
+    overflow-x: auto;
+  }
+
+  .life-side-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -1390,10 +1718,29 @@ dd {
   .gua-heading,
   .chart-grid,
   .life-summary-board,
+  .life-tv-header,
+  .life-trading-layout,
   .life-chart-svg,
+  .life-chart-loader,
   .life-crypto-badges,
   .life-analysis-grid {
     min-width: 736px;
+  }
+
+  .result-panel.life-terminal .result-title,
+  .result-panel.life-terminal .yao-list.life-mode {
+    width: calc(100% - 16px);
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+
+  .life-tv-header {
+    grid-template-columns: 1fr;
+  }
+
+  .life-symbol-block {
+    border-right: 0;
+    border-bottom: 1px solid #2a2e39;
   }
 
   .life-analysis-grid {
