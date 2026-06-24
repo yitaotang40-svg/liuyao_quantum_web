@@ -56,6 +56,7 @@ LIFE_KLINE_API_BASE=https://bboluo.com/v1
 LIFE_KLINE_MODEL=[L]gemini-3-flash-preview
 LIFE_KLINE_MAX_TOKENS=30000
 LIFE_KLINE_TIMEOUT=120
+LIFE_KLINE_MODEL_CHARTS=0
 LIFE_KLINE_CHUNK_MAX_TOKENS=9000
 LIFE_KLINE_CHUNK_TIMEOUT=75
 LIFE_KLINE_CHUNK_WORKERS=4
@@ -63,6 +64,8 @@ LIFE_KLINE_CHUNK_RETRIES=2
 LIFE_KLINE_ANALYSIS_MAX_TOKENS=6000
 LIFE_KLINE_ANALYSIS_TIMEOUT=60
 ```
+
+人生 K 线的年线默认由后端确定性算法生成，同一生日、历法和性别会得到同一组 K 线；大模型只用于解释文本。只有手动把 `LIFE_KLINE_MODEL_CHARTS=1` 时，才会允许模型直接生成年线。
 
 4. 如果前端继续用 GitHub Pages，部署后把 `static/config.js` 里的 `window.LIUYAO_API_BASE` 改成你的后端 URL。
 5. 重新 push 到 GitHub Pages 后，手机或任何电脑打开网页都可以起卦；不再依赖这台 MacBook 开机。

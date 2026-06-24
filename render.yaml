@@ -18,6 +18,8 @@ services:
         value: https://generativelanguage.googleapis.com/v1beta/openai
       - key: LIFE_KLINE_MODEL
         value: gemini-3.1-pro-preview
+      - key: LIFE_KLINE_MODEL_CHARTS
+        value: "0"
       - key: LIFE_KLINE_MAX_TOKENS
         value: "30000"
       - key: LIFE_KLINE_TIMEOUT

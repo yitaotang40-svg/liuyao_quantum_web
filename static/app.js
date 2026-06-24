@@ -322,7 +322,11 @@ const LIFE_CHART = {
   bottom: 58,
 };
 
-function buildLifeChartSvg(points) {
+function lifeAxisLabel(point) {
+  return point.monthName || point.year || "-";
+}
+
+function buildLifeChartSvg(points, options = {}) {
   const { width, height, left, right, top, bottom } = LIFE_CHART;
   const innerWidth = width - left - right;
   const innerHeight = height - top - bottom;
@@ -333,8 +337,9 @@ function buildLifeChartSvg(points) {
   const spread = Math.max(1, maxValue - minValue);
   const y = (value) => top + ((maxValue - value) / spread) * innerHeight;
   const step = innerWidth / Math.max(1, points.length - 1);
-  const bodyWidth = Math.max(3, Math.min(8, step * 0.58));
+  const bodyWidth = Math.max(3, Math.min(points.length <= 24 ? 18 : 8, step * 0.58));
   const gridLines = [0, 20, 40, 60, 80, 100];
+  const period = options.period || "year";
 
   const candles = points
     .map((point, index) => {
@@ -348,7 +353,9 @@ function buildLifeChartSvg(points) {
       const bodyTop = Math.min(y(open), y(close));
       const bodyHeight = Math.max(2, Math.abs(y(open) - y(close)));
       return `
-        <g class="life-candle" data-age="${escapeHtml(point.age)}" data-year="${escapeHtml(point.year)}">
+        <g class="life-candle" data-age="${escapeHtml(point.age)}" data-year="${escapeHtml(point.year)}" data-month="${escapeHtml(
+          point.monthName || "",
+        )}">
           <line x1="${x.toFixed(2)}" y1="${y(high).toFixed(2)}" x2="${x.toFixed(2)}" y2="${y(low).toFixed(2)}" stroke="${color}" stroke-width="1.4" />
           <rect x="${(x - bodyWidth / 2).toFixed(2)}" y="${bodyTop.toFixed(2)}" width="${bodyWidth.toFixed(2)}" height="${bodyHeight.toFixed(2)}" fill="${color}" />
         </g>`;
@@ -357,9 +364,9 @@ function buildLifeChartSvg(points) {
 
   const xTicks = points
     .map((point, index) => {
-      if (index % 10 !== 0 && index !== points.length - 1) return "";
+      if (points.length > 24 && index % 10 !== 0 && index !== points.length - 1) return "";
       const x = left + index * step;
-      return `<text x="${x.toFixed(2)}" y="${height - 18}" text-anchor="middle">${escapeHtml(point.year)}</text>`;
+      return `<text x="${x.toFixed(2)}" y="${height - 18}" text-anchor="middle">${escapeHtml(lifeAxisLabel(point))}</text>`;
     })
     .join("");
 
@@ -373,7 +380,9 @@ function buildLifeChartSvg(points) {
     .join("");
 
   return `
-    <svg class="life-chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="人生K线图，可用鼠标沿横轴选择年份">
+    <svg class="life-chart-svg ${period === "month" ? "life-chart-svg-month" : ""}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${
+      period === "month" ? "流月K线图" : "人生K线图，可用鼠标沿横轴选择年份"
+    }">
       <g class="life-grid">${grid}</g>
       <line class="life-axis" x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}" />
       <line class="life-axis" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}" />
@@ -405,10 +414,58 @@ function lifePointText(point) {
   if (!point) return "-";
   const delta = numericValue(point.close) - numericValue(point.open);
   const sign = delta > 0 ? "+" : "";
-  return `${escapeHtml(point.year)} · ${escapeHtml(point.ganZhi)} · ${escapeHtml(point.age)}岁 · ${sign}${delta}`;
+  const label = point.monthLabel ? `${point.year} · ${point.monthLabel}` : `${point.year} · ${point.ganZhi}`;
+  return `${escapeHtml(label)} · ${escapeHtml(point.age)}岁 · ${sign}${delta}`;
 }
 
-function updateLifeSelection(card, points, index, lock = false) {
+function buildLifeMonthList(monthPoints) {
+  if (!monthPoints.length) {
+    return `<p class="life-month-empty">暂无流月数据</p>`;
+  }
+  return monthPoints
+    .map((point) => {
+      const signals = Array.isArray(point.signals) && point.signals.length ? point.signals.join(" / ") : "少刑冲";
+      return `
+        <div class="life-month-row">
+          <strong>${escapeHtml(point.monthLabel || point.monthName || "-")}</strong>
+          <span>${escapeHtml(point.tenGod || "-")} · 月令${escapeHtml(point.seasonState || "-")} · 十二宫${escapeHtml(
+            point.growthState || "-",
+          )} · ${escapeHtml(point.category || "-")}</span>
+          <em>O ${escapeHtml(point.open)} H ${escapeHtml(point.high)} L ${escapeHtml(point.low)} C ${escapeHtml(point.close)}</em>
+          <p>${escapeHtml(signals)}；${escapeHtml(point.reason || "")}</p>
+        </div>`;
+    })
+    .join("");
+}
+
+function renderLifeMonthPanel(card, year, monthByYear) {
+  const panel = card.querySelector("[data-life-month-panel]");
+  if (!panel) return;
+  const monthPoints = monthByYear.get(String(year)) || [];
+  const first = monthPoints[0] || {};
+  const aggregate = monthPoints.length
+    ? {
+        open: monthPoints[0].open,
+        close: monthPoints[monthPoints.length - 1].close,
+        high: Math.max(...monthPoints.map((point) => numericValue(point.high))),
+        low: Math.min(...monthPoints.map((point) => numericValue(point.low))),
+      }
+    : null;
+  panel.innerHTML = `
+    <div class="life-month-head">
+      <div>
+        <span>FLOW MONTHS</span>
+        <strong>${escapeHtml(year || "-")} ${escapeHtml(first.annualGanZhi || "")} · 节气流月K线</strong>
+      </div>
+      <em>${aggregate ? `聚合年K O${aggregate.open} H${aggregate.high} L${aggregate.low} C${aggregate.close}` : "等待选择年份"}</em>
+    </div>
+    <div class="life-month-layout">
+      <div class="life-month-chart">${monthPoints.length ? buildLifeChartSvg(monthPoints, { period: "month" }) : ""}</div>
+      <div class="life-month-list">${buildLifeMonthList(monthPoints)}</div>
+    </div>`;
+}
+
+function updateLifeSelection(card, points, index, lock = false, monthByYear = null) {
   if (!points.length) return;
   const safeIndex = Math.max(0, Math.min(points.length - 1, index));
   const point = points[safeIndex];
@@ -461,17 +518,28 @@ function updateLifeSelection(card, points, index, lock = false) {
   crosshair.querySelector(".life-selected-dot").setAttribute("cy", y.toFixed(2));
   crosshair.querySelector(".life-axis-label-bg").setAttribute("x", (labelX - 32).toFixed(2));
   crosshair.querySelector(".life-axis-label").setAttribute("x", labelX.toFixed(2));
-  crosshair.querySelector(".life-axis-label").textContent = point.year;
+  crosshair.querySelector(".life-axis-label").textContent = lifeAxisLabel(point);
   crosshair.querySelector(".life-price-label-bg").setAttribute("y", (priceY - 12).toFixed(2));
   crosshair.querySelector(".life-price-label").setAttribute("y", (priceY + 5).toFixed(2));
   crosshair.querySelector(".life-price-label").textContent = point.close;
+  if (monthByYear) {
+    renderLifeMonthPanel(card, point.year, monthByYear);
+  }
 }
 
-function setupLifeChartInteraction(card, points) {
+function setupLifeChartInteraction(card, points, monthPoints = []) {
   if (!points.length) return;
   const svg = card.querySelector(".life-chart-svg");
   const yearButtons = card.querySelectorAll("[data-life-year-index]");
   if (!svg) return;
+  const monthByYear = new Map();
+  monthPoints.forEach((point) => {
+    const key = String(point.year);
+    if (!monthByYear.has(key)) {
+      monthByYear.set(key, []);
+    }
+    monthByYear.get(key).push(point);
+  });
   const indexFromEvent = (event) => {
     const rect = svg.getBoundingClientRect();
     const rawX = ((event.clientX - rect.left) / rect.width) * LIFE_CHART.width;
@@ -483,12 +551,12 @@ function setupLifeChartInteraction(card, points) {
     0,
   );
 
-  updateLifeSelection(card, points, peakIndex, true);
-  svg.addEventListener("pointermove", (event) => updateLifeSelection(card, points, indexFromEvent(event)));
-  svg.addEventListener("click", (event) => updateLifeSelection(card, points, indexFromEvent(event), true));
-  svg.addEventListener("pointerleave", () => updateLifeSelection(card, points, Number(card.dataset.lockedIndex || peakIndex)));
+  updateLifeSelection(card, points, peakIndex, true, monthByYear);
+  svg.addEventListener("pointermove", (event) => updateLifeSelection(card, points, indexFromEvent(event), false, monthByYear));
+  svg.addEventListener("click", (event) => updateLifeSelection(card, points, indexFromEvent(event), true, monthByYear));
+  svg.addEventListener("pointerleave", () => updateLifeSelection(card, points, Number(card.dataset.lockedIndex || peakIndex), false, monthByYear));
   yearButtons.forEach((button) => {
-    button.addEventListener("click", () => updateLifeSelection(card, points, Number(button.dataset.lifeYearIndex), true));
+    button.addEventListener("click", () => updateLifeSelection(card, points, Number(button.dataset.lifeYearIndex), true, monthByYear));
   });
 }
 
@@ -580,6 +648,9 @@ function renderLifeKline(result) {
   const birth = result.birthInfo || {};
   const analysis = result.analysis || {};
   const points = Array.isArray(result.chartData) ? result.chartData : [];
+  const monthPoints = Array.isArray(result.monthChartData) ? result.monthChartData : [];
+  const monthKline = result.monthKline || {};
+  const model = result.model || {};
   const dayun = birth.dayun || {};
   const bazi = Array.isArray(birth.bazi) ? birth.bazi : analysis.bazi || [];
   const peak = points.reduce((best, point) => (numericValue(point.high) > numericValue(best?.high) ? point : best), null);
@@ -608,7 +679,7 @@ function renderLifeKline(result) {
         <div class="life-chart-toolbar">
           <span>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")}</span>
           <button type="button" class="is-active">1Y</button>
-          <button type="button">OHLC</button>
+          <button type="button">1M</button>
           <button type="button">Bazi</button>
         </div>
         ${buildLifeChartSvg(points)}
@@ -639,13 +710,24 @@ function renderLifeKline(result) {
         </div>
       </aside>
     </div>
+    <section class="life-month-panel" data-life-month-panel aria-label="选中年份的流月K线">
+      <div class="life-month-head">
+        <div>
+          <span>FLOW MONTHS</span>
+          <strong>选择年线后显示 12 个节气月</strong>
+        </div>
+        <em>${escapeHtml(monthKline.yearPreserving ? "聚合校验通过：月K不改年K" : "等待月K校验")}</em>
+      </div>
+    </section>
     <div class="life-crypto-badges">
       <span>暴富流年：${escapeHtml(analysis.cryptoYear || "待定")}</span>
       <span>交易风格：${escapeHtml(analysis.cryptoStyle || "稳健低杠杆")}</span>
+      <span>${escapeHtml(model.deterministic === false ? "模型年线" : "年线确定性后端")}</span>
+      <span>${escapeHtml(monthKline.yearPreserving ? "月线聚合=年线" : "月线待校验")}</span>
     </div>
     <div class="life-analysis-grid">${renderLifeAnalysisCards(analysis)}</div>`;
   yaoList.appendChild(item);
-  setupLifeChartInteraction(item, points);
+  setupLifeChartInteraction(item, points, monthPoints);
 }
 
 function setRunningControls(running, label = "起卦中") {

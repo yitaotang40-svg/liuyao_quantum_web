@@ -279,6 +279,27 @@ STEM_ELEMENTS = {
 }
 GENERATES = {"木": "火", "火": "土", "土": "金", "金": "水", "水": "木"}
 CONTROLS = {"木": "土", "土": "水", "水": "火", "火": "金", "金": "木"}
+YANG_STEMS = {"甲", "丙", "戊", "庚", "壬"}
+FLOW_MONTH_BRANCHES = list("寅卯辰巳午未申酉戌亥子丑")
+FLOW_MONTH_NAMES = ["寅月", "卯月", "辰月", "巳月", "午月", "未月", "申月", "酉月", "戌月", "亥月", "子月", "丑月"]
+FLOW_MONTH_JIE_INDICES = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 0]
+BRANCH_CLASH = {"子": "午", "午": "子", "丑": "未", "未": "丑", "寅": "申", "申": "寅", "卯": "酉", "酉": "卯", "辰": "戌", "戌": "辰", "巳": "亥", "亥": "巳"}
+BRANCH_COMBINE = {"子": "丑", "丑": "子", "寅": "亥", "亥": "寅", "卯": "戌", "戌": "卯", "辰": "酉", "酉": "辰", "巳": "申", "申": "巳", "午": "未", "未": "午"}
+BRANCH_HARM = {"子": "未", "未": "子", "丑": "午", "午": "丑", "寅": "巳", "巳": "寅", "卯": "辰", "辰": "卯", "申": "亥", "亥": "申", "酉": "戌", "戌": "酉"}
+BRANCH_TRINES = [("申子辰", "水"), ("亥卯未", "木"), ("寅午戌", "火"), ("巳酉丑", "金")]
+NATAL_BRANCH_LABELS = ["年支", "月支", "日支", "时支"]
+GROWTH_STATES_BY_STEM = {
+    "甲": dict(zip(list("亥子丑寅卯辰巳午未申酉戌"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "乙": dict(zip(list("午巳辰卯寅丑子亥戌酉申未"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "丙": dict(zip(list("寅卯辰巳午未申酉戌亥子丑"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "丁": dict(zip(list("酉申未午巳辰卯寅丑子亥戌"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "戊": dict(zip(list("寅卯辰巳午未申酉戌亥子丑"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "己": dict(zip(list("酉申未午巳辰卯寅丑子亥戌"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "庚": dict(zip(list("巳午未申酉戌亥子丑寅卯辰"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "辛": dict(zip(list("子亥戌酉申未午巳辰卯寅丑"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "壬": dict(zip(list("申酉戌亥子丑寅卯辰巳午未"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+    "癸": dict(zip(list("卯寅丑子亥戌酉申未午巳辰"), ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"])),
+}
 SIX_SPIRITS = ["青龙", "朱雀", "勾陈", "螣蛇", "白虎", "玄武"]
 SIX_SPIRIT_START_BY_DAY_STEM = {
     "甲": 0,
@@ -867,6 +888,290 @@ def dayun_for_age(age: int, dayun: dict[str, Any]) -> str:
     return str(dayun["sequence"][da_yun_idx])
 
 
+def ten_god_for_stem(day_stem: str, target_stem: str) -> str:
+    day_element = STEM_ELEMENTS[day_stem]
+    target_element = STEM_ELEMENTS[target_stem]
+    same_polarity = (day_stem in YANG_STEMS) == (target_stem in YANG_STEMS)
+    if target_element == day_element:
+        return "比肩" if same_polarity else "劫财"
+    if GENERATES[target_element] == day_element:
+        return "偏印" if same_polarity else "正印"
+    if GENERATES[day_element] == target_element:
+        return "食神" if same_polarity else "伤官"
+    if CONTROLS[target_element] == day_element:
+        return "七杀" if same_polarity else "正官"
+    if CONTROLS[day_element] == target_element:
+        return "偏财" if same_polarity else "正财"
+    return "平"
+
+
+def ten_god_category(ten_god: str) -> str:
+    if ten_god in {"正印", "偏印"}:
+        return "印星：学习、资源、修复"
+    if ten_god in {"比肩", "劫财"}:
+        return "比劫：人际、竞争、合伙"
+    if ten_god in {"食神", "伤官"}:
+        return "食伤：表达、创作、输出"
+    if ten_god in {"正财", "偏财"}:
+        return "财星：现金流、交易、机会"
+    if ten_god in {"正官", "七杀"}:
+        return "官杀：规则、职位、压力"
+    return "平衡：观察、蓄力"
+
+
+def season_for_branch(branch: str) -> str:
+    if branch in "寅卯":
+        return "春"
+    if branch == "辰":
+        return "四季"
+    if branch in "巳午":
+        return "夏"
+    if branch == "未":
+        return "四季"
+    if branch in "申酉":
+        return "秋"
+    if branch == "戌":
+        return "四季"
+    if branch in "亥子":
+        return "冬"
+    return "四季"
+
+
+def element_season_state(element: str, branch: str) -> str:
+    season = season_for_branch(branch)
+    rules = {
+        "春": {"木": "旺", "火": "相", "水": "休", "金": "囚", "土": "死"},
+        "夏": {"火": "旺", "土": "相", "木": "休", "水": "囚", "金": "死"},
+        "秋": {"金": "旺", "水": "相", "土": "休", "火": "囚", "木": "死"},
+        "冬": {"水": "旺", "木": "相", "金": "休", "土": "囚", "火": "死"},
+        "四季": {"土": "旺", "金": "相", "火": "休", "木": "囚", "水": "死"},
+    }
+    return rules[season][element]
+
+
+def growth_state_for_stem(day_stem: str, branch: str) -> str:
+    return GROWTH_STATES_BY_STEM.get(day_stem, {}).get(branch, "平")
+
+
+def branch_punishment(branch: str, natal_branch: str) -> str | None:
+    if {branch, natal_branch} == {"子", "卯"}:
+        return "刑"
+    if branch in {"寅", "巳", "申"} and natal_branch in {"寅", "巳", "申"} and branch != natal_branch:
+        return "刑"
+    if branch in {"丑", "未", "戌"} and natal_branch in {"丑", "未", "戌"} and branch != natal_branch:
+        return "刑"
+    if branch == natal_branch and branch in {"辰", "午", "酉", "亥"}:
+        return "自刑"
+    return None
+
+
+def branch_trine_signals(month_branch: str, bazi: list[str]) -> list[str]:
+    natal_branches = [pillar[1] for pillar in bazi]
+    branch_set = set(natal_branches + [month_branch])
+    signals: list[str] = []
+    for group_text, element in BRANCH_TRINES:
+        group = set(group_text)
+        if month_branch not in group:
+            continue
+        if group.issubset(branch_set):
+            signals.append(f"{group_text}三合{element}局")
+            continue
+        hits = sorted(group.intersection(natal_branches), key=group_text.index)
+        if hits:
+            signals.append(f"{month_branch}{hits[0]}半合{element}")
+    return signals
+
+
+def branch_relation_signals(month_branch: str, bazi: list[str]) -> list[str]:
+    signals: list[str] = branch_trine_signals(month_branch, bazi)
+    for label, pillar in zip(NATAL_BRANCH_LABELS, bazi):
+        natal_branch = pillar[1]
+        if BRANCH_CLASH.get(month_branch) == natal_branch:
+            signals.append(f"{label}{natal_branch}冲")
+        if BRANCH_COMBINE.get(month_branch) == natal_branch:
+            signals.append(f"{label}{natal_branch}合")
+        if BRANCH_HARM.get(month_branch) == natal_branch:
+            signals.append(f"{label}{natal_branch}害")
+        punishment = branch_punishment(month_branch, natal_branch)
+        if punishment:
+            signals.append(f"{label}{natal_branch}{punishment}")
+    return signals[:6]
+
+
+def flow_month_pillars(flow_year_pillar: str) -> list[str]:
+    start_stem = MONTH_START_STEM_BY_YEAR_STEM[flow_year_pillar[0]]
+    start_index = STEMS.index(start_stem)
+    return [STEMS[(start_index + index) % 10] + FLOW_MONTH_BRANCHES[index] for index in range(12)]
+
+
+def flow_month_start_terms(year: int) -> list[dict[str, Any]]:
+    tz = cast_timezone()
+    terms: list[dict[str, Any]] = []
+    for index, term_index in enumerate(FLOW_MONTH_JIE_INDICES):
+        term_year = year + 1 if term_index == 0 else year
+        term = solar_terms_for_year(term_year, tz)[term_index]
+        terms.append(
+            {
+                "name": term["name"],
+                "time": term["time"].isoformat(),
+                "monthName": FLOW_MONTH_NAMES[index],
+            }
+        )
+    return terms
+
+
+def month_influence_score(day_stem: str, bazi: list[str], month_pillar: str) -> tuple[float, str, str, str, str, list[str]]:
+    day_element = STEM_ELEMENTS[day_stem]
+    month_stem, month_branch = month_pillar[0], month_pillar[1]
+    ten_god = ten_god_for_stem(day_stem, month_stem)
+    season_state = element_season_state(day_element, month_branch)
+    growth_state = growth_state_for_stem(day_stem, month_branch)
+    score = pillar_element_score(day_element, month_pillar, 0.9, 1.1)
+    score += {"旺": 4.0, "相": 2.2, "休": 0.2, "囚": -2.4, "死": -4.0}[season_state]
+    score += {
+        "长生": 2.0,
+        "沐浴": 0.4,
+        "冠带": 1.0,
+        "临官": 2.4,
+        "帝旺": 3.0,
+        "衰": -0.8,
+        "病": -1.6,
+        "死": -2.4,
+        "墓": -0.8,
+        "绝": -3.0,
+        "胎": 0.8,
+        "养": 1.0,
+    }.get(growth_state, 0)
+    score += {
+        "正印": 1.4,
+        "偏印": 1.0,
+        "食神": 1.8,
+        "伤官": 1.0,
+        "正财": 2.6,
+        "偏财": 2.2,
+        "正官": 1.4,
+        "七杀": 0.5,
+        "比肩": -0.4,
+        "劫财": -1.1,
+    }.get(ten_god, 0)
+    signals = branch_relation_signals(month_branch, bazi)
+    for signal in signals:
+        if "三合" in signal:
+            score += 2.4
+        elif "半合" in signal:
+            score += 1.0
+        elif signal.endswith("合"):
+            score += 1.8
+        elif signal.endswith("冲"):
+            score -= 2.6
+        elif signal.endswith("害"):
+            score -= 1.6
+        elif signal.endswith("刑") or signal.endswith("自刑"):
+            score -= 1.2
+    return score, ten_god, ten_god_category(ten_god), season_state, growth_state, signals
+
+
+def flow_month_reason(month_pillar: str, ten_god: str, season_state: str, growth_state: str, signals: list[str]) -> str:
+    signal_text = "、".join(signals[:2]) if signals else "少刑冲"
+    return f"{month_pillar}{ten_god}主事，日主{season_state}，十二宫{growth_state}，{signal_text}。"
+
+
+def generate_months_for_year(year_point: dict[str, Any], bazi: list[str]) -> list[dict[str, Any]]:
+    day_stem = bazi[2][0]
+    month_pillars = flow_month_pillars(str(year_point["ganZhi"]))
+    start_terms = flow_month_start_terms(int(year_point["year"]))
+    influences = [month_influence_score(day_stem, bazi, pillar) for pillar in month_pillars]
+    raw_scores = [item[0] for item in influences]
+    mean_score = sum(raw_scores) / len(raw_scores)
+    centered = [score - mean_score for score in raw_scores]
+    max_abs = max(1.0, max(abs(value) for value in centered))
+
+    annual_open = clamp_life_value(float(year_point["open"]))
+    annual_close = clamp_life_value(float(year_point["close"]))
+    annual_high = clamp_life_value(float(year_point["high"]))
+    annual_low = clamp_life_value(float(year_point["low"]))
+    trend = annual_close - annual_open
+    amplitude = min((annual_high - annual_low) * 0.22, 10)
+
+    closes: list[int] = []
+    for index, centered_score in enumerate(centered, start=1):
+        base = annual_open + (trend * index / 12)
+        closes.append(clamp_life_value(base + (centered_score / max_abs) * amplitude, annual_low, annual_high))
+    closes[-1] = annual_close
+
+    rows: list[dict[str, Any]] = []
+    previous_close = annual_open
+    for index, close in enumerate(closes):
+        month_pillar = month_pillars[index]
+        raw_score, ten_god, category, season_state, growth_state, signals = influences[index]
+        cushion = max(1.0, min(6.0, abs(raw_score - mean_score) * 0.35 + 1.5))
+        high = clamp_life_value(max(previous_close, close) + cushion, annual_low, annual_high)
+        low = clamp_life_value(min(previous_close, close) - cushion, annual_low, annual_high)
+        rows.append(
+            {
+                "age": year_point["age"],
+                "year": year_point["year"],
+                "annualIndex": int(year_point["age"]) - 1,
+                "annualGanZhi": year_point["ganZhi"],
+                "daYun": year_point["daYun"],
+                "monthIndex": index + 1,
+                "monthName": FLOW_MONTH_NAMES[index],
+                "monthLabel": f"{FLOW_MONTH_NAMES[index]} {month_pillar}",
+                "ganZhi": month_pillar,
+                "startTerm": start_terms[index],
+                "tenGod": ten_god,
+                "category": category,
+                "seasonState": season_state,
+                "growthState": growth_state,
+                "signals": signals,
+                "open": previous_close,
+                "close": close,
+                "high": high,
+                "low": low,
+                "score": close,
+                "reason": flow_month_reason(month_pillar, ten_god, season_state, growth_state, signals),
+            }
+        )
+        previous_close = close
+
+    peak_index = max(range(12), key=lambda idx: raw_scores[idx])
+    trough_index = min(range(12), key=lambda idx: raw_scores[idx])
+    rows[peak_index]["high"] = annual_high
+    rows[trough_index]["low"] = annual_low
+    return rows
+
+
+def aggregate_months_to_year(months: list[dict[str, Any]]) -> dict[str, int]:
+    return {
+        "open": int(months[0]["open"]),
+        "close": int(months[-1]["close"]),
+        "high": max(int(month["high"]) for month in months),
+        "low": min(int(month["low"]) for month in months),
+    }
+
+
+def generate_month_life_chart(chart_data: list[dict[str, Any]], bazi: list[str]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    month_data: list[dict[str, Any]] = []
+    checks: list[dict[str, Any]] = []
+    all_match = True
+    sample_ages = {1, 7, 14, 25, 35, len(chart_data)}
+    for point in chart_data:
+        months = generate_months_for_year(point, bazi)
+        month_data.extend(months)
+        aggregate = aggregate_months_to_year(months)
+        expected = {key: int(point[key]) for key in ("open", "close", "high", "low")}
+        matches = aggregate == expected
+        all_match = all_match and matches
+        if int(point["age"]) in sample_ages:
+            checks.append({"year": point["year"], "age": point["age"], "expected": expected, "aggregate": aggregate, "matches": matches})
+    return month_data, {
+        "basis": "节气流月、日干十神、月令旺衰、寄生十二宫、刑冲害合与三合；月K由年K边界约束生成",
+        "monthsPerYear": 12,
+        "yearPreserving": all_match,
+        "sampleChecks": checks,
+    }
+
+
 def life_reason(score: int, delta: int, age: int, gan_zhi: str, da_yun: str) -> str:
     if score >= 82:
         return f"{da_yun}承接{gan_zhi}，机会集中宜主动扩张。"
@@ -1159,23 +1464,30 @@ def generate_life_kline(body: dict[str, Any]) -> dict[str, Any]:
 请严格使用上面的四柱、大运方向、起运年龄、第一步大运和大运序列。
 chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1；ganZhi 必须对应该流年干支。
 """.strip()
-    try:
-        chart_data = generate_model_chart_chunks(context_prompt, local.year, dayun)
-        model_info = {"used": True, "error": None, "chartSource": "model", "method": "chunked"}
-    except Exception as exc:
-        chart_data = backend_chart_data
-        model_info = {"used": False, "error": str(exc)[:500], "chartSource": "backend_fallback"}
-    if model_info["chartSource"] == "model":
+    allow_model_charts = truthy(os.getenv("LIFE_KLINE_MODEL_CHARTS"))
+    model_info = {
+        "used": False,
+        "error": None,
+        "chartSource": "backend_deterministic",
+        "method": "backend_formula",
+        "deterministic": True,
+    }
+    if allow_model_charts:
         try:
-            analysis = generate_model_analysis(context_prompt, bazi, chart_data)
-            model_info["analysisSource"] = "model"
+            chart_data = generate_model_chart_chunks(context_prompt, local.year, dayun)
+            model_info.update({"used": True, "chartSource": "model", "method": "chunked", "deterministic": False})
         except Exception as exc:
-            analysis = fallback_life_analysis(bazi, chart_data)
-            model_info["analysisSource"] = "backend_fallback"
-            model_info["analysisError"] = str(exc)[:500]
-    else:
+            chart_data = backend_chart_data
+            model_info.update({"error": str(exc)[:500], "chartSource": "backend_deterministic", "method": "backend_formula", "deterministic": True})
+
+    try:
+        analysis = generate_model_analysis(context_prompt, bazi, chart_data)
+        model_info["analysisSource"] = "model"
+    except Exception as exc:
         analysis = fallback_life_analysis(bazi, chart_data)
         model_info["analysisSource"] = "backend_fallback"
+        model_info["analysisError"] = str(exc)[:500]
+    month_chart_data, month_kline = generate_month_life_chart(chart_data, bazi)
     return {
         "birthInfo": {
             "name": name,
@@ -1191,6 +1503,8 @@ chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1�
         },
         "analysis": analysis,
         "chartData": chart_data,
+        "monthChartData": month_chart_data,
+        "monthKline": month_kline,
         "model": model_info,
     }
 

@@ -1247,6 +1247,91 @@ dd {
   padding: 10px 12px;
 }
 
+.life-month-panel {
+  min-width: 980px;
+  border-top: 1px solid #2a2e39;
+  background: #0f1117;
+}
+
+.life-month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #2a2e39;
+  background: #131722;
+  padding: 12px 14px;
+}
+
+.life-month-head div {
+  display: grid;
+  gap: 5px;
+}
+
+.life-month-head span,
+.life-month-head em {
+  color: #787b86;
+  font: 700 11px var(--mono);
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.life-month-head strong {
+  color: #f0f3fa;
+  font-size: 15px;
+}
+
+.life-month-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  min-height: 360px;
+}
+
+.life-month-chart {
+  min-width: 0;
+  border-right: 1px solid #2a2e39;
+}
+
+.life-chart-svg-month {
+  min-width: 620px;
+  max-height: 360px;
+}
+
+.life-month-list {
+  display: grid;
+  align-content: start;
+  max-height: 430px;
+  overflow: auto;
+  background: #131722;
+}
+
+.life-month-row {
+  display: grid;
+  gap: 5px;
+  border-bottom: 1px solid #2a2e39;
+  padding: 10px 12px;
+}
+
+.life-month-row strong {
+  color: #f0f3fa;
+  font-size: 13px;
+}
+
+.life-month-row span,
+.life-month-row em {
+  color: #b2b5be;
+  font: 12px var(--mono);
+  font-style: normal;
+}
+
+.life-month-row p,
+.life-month-empty {
+  margin: 0;
+  color: #787b86;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .life-side-panel {
   display: grid;
   align-content: start;
@@ -1649,6 +1734,20 @@ dd {
   .life-side-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .life-month-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .life-month-chart {
+    border-right: 0;
+    border-bottom: 1px solid #2a2e39;
+    overflow-x: auto;
+  }
+
+  .life-month-list {
+    max-height: 320px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1716,15 +1815,21 @@ dd {
 
   .time-board,
   .gua-heading,
-  .chart-grid,
-  .life-summary-board,
-  .life-tv-header,
-  .life-trading-layout,
-  .life-chart-svg,
-  .life-chart-loader,
-  .life-crypto-badges,
-  .life-analysis-grid {
+    .chart-grid,
+    .life-summary-board,
+    .life-tv-header,
+    .life-trading-layout,
+    .life-month-panel,
+    .life-chart-svg,
+    .life-chart-loader,
+    .life-crypto-badges,
+    .life-analysis-grid {
     min-width: 736px;
+  }
+
+  .life-month-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .result-panel.life-terminal .result-title,
