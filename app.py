@@ -342,7 +342,7 @@ SIX_SPIRIT_START_BY_DAY_STEM = {
 
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
-LIFE_KLINE_ENGINE_VERSION = "wealth-v3.2-consistent-month-events"
+LIFE_KLINE_ENGINE_VERSION = "wealth-v3.3-deterministic-peak-label"
 ACTIVE_STATUSES = {
     "CREATED",
     "CONNECTING",
@@ -879,6 +879,17 @@ def normalize_life_analysis(data: dict[str, Any], bazi: list[str]) -> dict[str, 
         "cryptoYear": data.get("cryptoYear") or "待定",
         "cryptoStyle": data.get("cryptoStyle") or "稳健低杠杆",
     }
+
+
+def apply_deterministic_life_analysis_fields(
+    analysis: dict[str, Any],
+    bazi: list[str],
+    chart_data: list[dict[str, Any]],
+) -> dict[str, Any]:
+    peak = max(chart_data, key=lambda point: float(point["score"]))
+    analysis["bazi"] = bazi
+    analysis["cryptoYear"] = f"{peak['year']}年（{peak['ganZhi']}）"
+    return analysis
 
 
 def clamp_life_value(value: float, lower: float = 0, upper: float = 100) -> int:
@@ -2314,6 +2325,7 @@ chartPoints 的 year 从 {local.year} 年开始，每增长 1 岁 year 增加 1�
         analysis = fallback_life_analysis(bazi, chart_data, wealth_context)
         model_info["analysisSource"] = "backend_fallback"
         model_info["analysisError"] = str(exc)[:500]
+    analysis = apply_deterministic_life_analysis_fields(analysis, bazi, chart_data)
     month_chart_data, month_kline = generate_month_life_chart(chart_data, bazi, wealth_context)
     return {
         "birthInfo": {
