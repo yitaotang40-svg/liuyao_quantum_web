@@ -2741,3 +2741,600 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+
+/* Wealth Scope: oscilloscope-inspired life Kline */
+.result-panel.life-terminal {
+  background: #030303;
+}
+
+.result-panel.life-terminal .result-toolbar {
+  border-color: #20232a;
+  background: #060606;
+  color: #747a86;
+}
+
+.result-panel.life-terminal .result-title {
+  color: #d9dde6;
+  font: 700 16px var(--mono);
+  letter-spacing: 0;
+}
+
+.life-kline-card {
+  border: 1px solid #252933;
+  border-radius: 0;
+  background: #000000;
+  color: #d7dbe3;
+  box-shadow: none;
+}
+
+.life-scope-shell {
+  gap: 0;
+  padding: 18px;
+  background: #000000;
+}
+
+.life-scope-header {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.22fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #20232a;
+  padding: 8px 0 18px;
+}
+
+.life-scope-ident {
+  display: grid;
+  gap: 5px;
+}
+
+.life-scope-ident span,
+.life-scope-ident small,
+.life-scope-header > em,
+.life-scope-cursor span {
+  color: #7c828d;
+  font: 700 11px var(--mono);
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+.life-scope-ident strong {
+  color: #e3e6ec;
+  font: 800 20px var(--mono);
+}
+
+.life-scope-header > em {
+  color: #7d8490;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.life-scope-overview {
+  min-width: 0;
+}
+
+.life-scope-overview-svg {
+  display: block;
+  width: 100%;
+  height: 58px;
+}
+
+.life-scope-overview-svg rect {
+  fill: #050505;
+  stroke: #4f6d8b;
+  stroke-width: 1.5;
+}
+
+.life-scope-overview-zero {
+  stroke: #252a31;
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.life-scope-wave-a {
+  fill: none;
+  stroke: #ff6a00;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 3px rgba(255, 106, 0, 0.35));
+}
+
+.life-scope-overview-marker {
+  stroke: #4264ff;
+  stroke-width: 3;
+}
+
+.life-scope-readouts {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.15fr) minmax(190px, 0.52fr);
+  gap: 28px;
+  border-bottom: 1px solid #20232a;
+  padding: 20px 0 22px;
+}
+
+.life-scope-channel {
+  min-width: 0;
+}
+
+.life-scope-channel > strong {
+  display: block;
+  margin-bottom: 10px;
+  font: 800 12px var(--mono);
+}
+
+.life-scope-channel-a,
+.life-scope-channel-a dd {
+  color: #ff6a00;
+}
+
+.life-scope-channel-b,
+.life-scope-channel-b dd {
+  color: #821cff;
+}
+
+.life-scope-channel dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  font: 700 14px var(--mono);
+}
+
+.life-scope-channel dl div {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.life-scope-channel dt {
+  color: inherit;
+}
+
+.life-scope-channel dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.life-scope-cursor {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  border-left: 1px solid #20232a;
+  padding-left: 20px;
+}
+
+.life-scope-cursor strong {
+  color: #4264ff;
+  font: 800 38px var(--mono);
+  line-height: 1;
+}
+
+.life-scope-cursor p,
+.life-scope-cursor em {
+  margin: 0;
+  color: #aeb4c0;
+  font: 700 12px var(--mono);
+  font-style: normal;
+}
+
+.life-scope-cursor b {
+  color: #4264ff;
+}
+
+.life-main-grid {
+  gap: 0;
+}
+
+.life-chart-stage {
+  border: 0;
+  border-radius: 0;
+}
+
+.life-chart-toolbar {
+  min-height: 52px;
+  gap: 12px;
+  border: 0;
+  background: #000000;
+  padding: 14px 0 10px;
+}
+
+.life-chart-toolbar strong {
+  color: #4264ff;
+  font: 800 14px var(--mono);
+}
+
+.life-chart-toolbar span {
+  color: #8b919c;
+  font: 700 12px var(--mono);
+}
+
+.life-chart-toolbar em {
+  margin-left: auto;
+  color: #777e8a;
+  font: 700 12px var(--mono);
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.life-chart-toolbar button,
+.life-year-rail button {
+  border: 1px solid #303541;
+  border-radius: 0;
+  background: #060606;
+  color: #939aa7;
+}
+
+.life-chart-toolbar button:hover,
+.life-year-rail button:hover {
+  background: #10131a;
+}
+
+.life-chart-toolbar button.is-active,
+.life-year-rail button.is-selected {
+  border-color: #4264ff;
+  background: #4264ff;
+  color: #ffffff;
+}
+
+.life-chart-frame {
+  border: 1px solid #2b3039;
+  background: #000000;
+}
+
+.life-chart-svg {
+  border: 0;
+  background:
+    linear-gradient(rgba(48, 52, 61, 0.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(48, 52, 61, 0.42) 1px, transparent 1px),
+    linear-gradient(rgba(29, 32, 38, 0.48) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 32, 38, 0.48) 1px, transparent 1px),
+    #000000;
+  background-size: 100% 62px, 98px 100%, 100% 12.4px, 19.6px 100%, 100% 100%;
+}
+
+.life-grid line {
+  stroke: rgba(111, 118, 131, 0.44);
+  stroke-dasharray: 5 5;
+}
+
+.life-grid text,
+.life-xaxis text {
+  fill: #747b88;
+  font: 700 11px var(--mono);
+}
+
+.life-axis {
+  stroke: #6b717d;
+  stroke-width: 1;
+}
+
+.life-close-line {
+  stroke: #821cff;
+  stroke-width: 2.2;
+  opacity: 0.92;
+  filter: drop-shadow(0 0 3px rgba(130, 28, 255, 0.35));
+}
+
+.life-candle.is-up line {
+  stroke: #ff6a00;
+}
+
+.life-candle.is-up rect {
+  fill: #ff6a00;
+}
+
+.life-candle.is-down line {
+  stroke: #821cff;
+}
+
+.life-candle.is-down rect {
+  fill: #821cff;
+}
+
+.life-candle line,
+.life-candle rect {
+  filter: none;
+}
+
+.life-crosshair-line {
+  stroke: #4264ff;
+  stroke-width: 1.5;
+  stroke-dasharray: 7 5;
+}
+
+.life-selected-dot,
+.life-axis-label-bg,
+.life-price-label-bg {
+  fill: #4264ff;
+}
+
+.life-selected-dot {
+  stroke: #ffffff;
+}
+
+.life-year-rail {
+  gap: 4px;
+  border: 0;
+  background: #000000;
+  padding: 10px 0 18px;
+}
+
+.life-scope-detail-panel {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid #20232a;
+  border-radius: 0;
+  background: #20232a;
+}
+
+.life-scope-detail-panel > div {
+  min-height: 126px;
+  border: 0;
+  background: #030303;
+  padding: 14px;
+}
+
+.life-scope-detail-panel span {
+  color: #737a86;
+  font: 700 11px var(--mono);
+}
+
+.life-scope-detail-panel strong {
+  color: #daddE5;
+  font: 700 14px var(--mono);
+}
+
+.life-scope-detail-panel p {
+  color: #8d949f;
+  font: 12px/1.55 var(--mono);
+}
+
+.life-selected-panel {
+  grid-column: span 2;
+}
+
+.life-selected-panel > strong,
+.life-selected-panel b,
+.life-core-panel b {
+  color: #4264ff;
+}
+
+.life-ohlc-strip {
+  border: 0;
+  border-top: 1px solid #20232a;
+  border-radius: 0;
+  background: transparent;
+  padding: 9px 0 0;
+}
+
+.life-ohlc-strip strong {
+  color: #ff6a00;
+}
+
+.life-month-panel {
+  margin-top: 18px;
+  border: 1px solid #20232a;
+  border-radius: 0;
+  background: #000000;
+}
+
+.life-month-head {
+  border-bottom: 1px solid #20232a;
+  background: #030303;
+}
+
+.life-month-head span,
+.life-month-head strong,
+.life-month-head em {
+  font-family: var(--mono);
+}
+
+.life-month-head span,
+.life-month-head strong {
+  color: #ff6a00;
+}
+
+.life-month-head em {
+  color: #821cff;
+}
+
+.life-month-chart,
+.life-month-list {
+  background: #000000;
+}
+
+.life-month-row {
+  border-bottom: 1px solid #20232a;
+  background: #020202;
+}
+
+.life-month-title strong,
+.life-month-row b {
+  color: #ff6a00;
+}
+
+.life-month-tags span {
+  border: 1px solid #383d47;
+  border-radius: 0;
+  background: #050505;
+  color: #821cff;
+}
+
+.life-month-meter,
+.life-score {
+  border-radius: 0;
+  background: #17191e;
+}
+
+.life-month-meter i,
+.life-score i {
+  background: linear-gradient(90deg, #ff6a00, #821cff);
+}
+
+.life-crypto-badges {
+  gap: 18px;
+  border: 0;
+  border-bottom: 1px solid #20232a;
+  border-radius: 0;
+  background: #000000;
+  padding: 14px 0;
+}
+
+.life-crypto-badges span {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #7d8490;
+  padding: 0;
+}
+
+.life-crypto-badges span:nth-child(1),
+.life-crypto-badges span:nth-child(4) {
+  color: #ff6a00;
+}
+
+.life-crypto-badges span:nth-child(2),
+.life-crypto-badges span:nth-child(5) {
+  color: #821cff;
+}
+
+.life-analysis-grid {
+  gap: 0;
+  border: 1px solid #20232a;
+  border-top: 0;
+  background: #20232a;
+}
+
+.life-analysis-card {
+  min-height: 168px;
+  border: 0;
+  border-radius: 0;
+  background: #030303;
+}
+
+.life-card-head strong {
+  color: #daddE5;
+  font-family: var(--mono);
+}
+
+.life-card-head span {
+  color: #821cff;
+}
+
+.life-analysis-card p {
+  color: #8e949f;
+  font-family: var(--mono);
+}
+
+.life-scope-loading-wave {
+  position: relative;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid #4f6d8b;
+  background:
+    linear-gradient(90deg, rgba(48, 52, 61, 0.35) 1px, transparent 1px),
+    #050505;
+  background-size: 48px 100%;
+}
+
+.life-scope-loading-wave i {
+  position: absolute;
+  inset: 10px -20% 10px 0;
+  background: repeating-radial-gradient(ellipse at 24px 50%, transparent 0 17px, #ff6a00 18px 19px, transparent 20px 48px);
+  animation: lifeScopeAcquire 1.1s linear infinite;
+}
+
+.life-loading-card .life-chart-loader {
+  min-height: 430px;
+  border: 1px solid #2b3039;
+  background:
+    linear-gradient(rgba(48, 52, 61, 0.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(48, 52, 61, 0.42) 1px, transparent 1px),
+    #000000;
+  background-size: 100% 62px, 98px 100%, 100% 100%;
+}
+
+.life-loading-card .life-chart-loader span {
+  background: linear-gradient(180deg, rgba(255, 106, 0, 0.95), rgba(255, 106, 0, 0.15));
+}
+
+.life-loading-card .life-chart-loader span:nth-child(2n) {
+  background: linear-gradient(180deg, rgba(130, 28, 255, 0.95), rgba(130, 28, 255, 0.15));
+}
+
+@keyframes lifeScopeAcquire {
+  to {
+    transform: translateX(96px);
+  }
+}
+
+@media (max-width: 980px) {
+  .life-scope-header {
+    grid-template-columns: minmax(150px, 0.25fr) minmax(0, 1fr);
+  }
+
+  .life-scope-header > em {
+    display: none;
+  }
+
+  .life-scope-readouts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .life-scope-cursor {
+    grid-column: 1 / -1;
+    border-top: 1px solid #20232a;
+    border-left: 0;
+    padding: 16px 0 0;
+  }
+
+  .life-scope-detail-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .life-scope-shell {
+    padding: 12px;
+  }
+
+  .life-scope-header,
+  .life-scope-readouts,
+  .life-scope-detail-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .life-scope-header {
+    gap: 10px;
+  }
+
+  .life-scope-readouts {
+    gap: 18px;
+  }
+
+  .life-scope-channel-b {
+    border-top: 1px solid #20232a;
+    padding-top: 16px;
+  }
+
+  .life-scope-cursor,
+  .life-selected-panel {
+    grid-column: auto;
+  }
+
+  .life-chart-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .life-chart-toolbar em {
+    margin-left: 0;
+  }
+
+  .life-chart-svg {
+    min-width: 760px;
+  }
+
+  .life-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+}

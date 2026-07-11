@@ -363,6 +363,31 @@ function lifeChartScale(points) {
   return { maxValue, minValue, spread, ticks: [...new Set(ticks)] };
 }
 
+function buildLifeScopeOverview(points) {
+  const width = 1120;
+  const height = 58;
+  const left = 8;
+  const right = 8;
+  const top = 8;
+  const bottom = 8;
+  const values = points.map((point) => numericValue(point.close, point.score));
+  const minValue = values.length ? Math.min(...values) : 0;
+  const maxValue = values.length ? Math.max(...values) : 100;
+  const spread = Math.max(1, maxValue - minValue);
+  const step = (width - left - right) / Math.max(1, points.length - 1);
+  const y = (value) => top + ((maxValue - value) / spread) * (height - top - bottom);
+  const path = values
+    .map((value, index) => `${index === 0 ? "M" : "L"}${(left + index * step).toFixed(2)},${y(value).toFixed(2)}`)
+    .join(" ");
+  return `
+    <svg class="life-scope-overview-svg" viewBox="0 0 ${width} ${height}" aria-label="百年财富波形总览">
+      <rect x="1" y="1" width="${width - 2}" height="${height - 2}" />
+      <line class="life-scope-overview-zero" x1="${left}" y1="${height / 2}" x2="${width - right}" y2="${height / 2}" />
+      <path class="life-scope-wave-a" d="${path}" />
+      <line class="life-scope-overview-marker" data-life-overview-marker x1="${left}" y1="2" x2="${left}" y2="${height - 2}" />
+    </svg>`;
+}
+
 function buildLifeChartSvg(points, options = {}) {
   const { width, height, left, right, top, bottom } = LIFE_CHART;
   const innerWidth = width - left - right;
@@ -389,15 +414,14 @@ function buildLifeChartSvg(points, options = {}) {
       const high = numericValue(point.high, Math.max(open, close));
       const low = numericValue(point.low, Math.min(open, close));
       const isUp = close >= open;
-      const color = isUp ? "#42be65" : "#fa4d56";
       const bodyTop = Math.min(y(open), y(close));
       const bodyHeight = Math.max(points.length <= 24 ? 5 : 3.5, Math.abs(y(open) - y(close)));
       return `
-        <g class="life-candle" data-age="${escapeHtml(point.age)}" data-year="${escapeHtml(point.year)}" data-month="${escapeHtml(
+        <g class="life-candle ${isUp ? "is-up" : "is-down"}" data-age="${escapeHtml(point.age)}" data-year="${escapeHtml(point.year)}" data-month="${escapeHtml(
           point.monthName || "",
         )}">
-          <line x1="${x.toFixed(2)}" y1="${y(high).toFixed(2)}" x2="${x.toFixed(2)}" y2="${y(low).toFixed(2)}" stroke="${color}" stroke-width="1.4" />
-          <rect x="${(x - bodyWidth / 2).toFixed(2)}" y="${bodyTop.toFixed(2)}" width="${bodyWidth.toFixed(2)}" height="${bodyHeight.toFixed(2)}" fill="${color}" />
+          <line x1="${x.toFixed(2)}" y1="${y(high).toFixed(2)}" x2="${x.toFixed(2)}" y2="${y(low).toFixed(2)}" stroke-width="1.4" />
+          <rect x="${(x - bodyWidth / 2).toFixed(2)}" y="${bodyTop.toFixed(2)}" width="${bodyWidth.toFixed(2)}" height="${bodyHeight.toFixed(2)}" />
         </g>`;
     })
     .join("");
@@ -577,6 +601,12 @@ function updateLifeSelection(card, points, index, lock = false, monthByYear = nu
   crosshair.querySelector(".life-price-label-bg").setAttribute("y", (priceY - 12).toFixed(2));
   crosshair.querySelector(".life-price-label").setAttribute("y", (priceY + 5).toFixed(2));
   crosshair.querySelector(".life-price-label").textContent = point.close;
+  const overviewMarker = card.querySelector("[data-life-overview-marker]");
+  if (overviewMarker) {
+    const overviewX = 8 + safeIndex * ((1120 - 16) / Math.max(1, points.length - 1));
+    overviewMarker.setAttribute("x1", overviewX.toFixed(2));
+    overviewMarker.setAttribute("x2", overviewX.toFixed(2));
+  }
   if (monthByYear) {
     renderLifeMonthPanel(card, point.year, monthByYear);
   }
@@ -655,33 +685,32 @@ function renderLifeWaiting() {
   const item = document.createElement("li");
   item.className = "life-kline-card life-loading-card";
   item.innerHTML = `
-    <div class="life-tv-header">
-      <div class="life-symbol-block">
-        <span>LIFEKLINE</span>
-        <strong>正在生成</strong>
-        <em>1Y</em>
-      </div>
-      <div class="life-bazi-strip">
-        <span>四柱</span>
-        <strong class="life-skeleton-text"></strong>
-      </div>
-      <div class="life-ohlc-strip">
-        <span>Y <strong>--</strong></span>
-        <span>O <strong>--</strong></span>
-        <span>H <strong>--</strong></span>
-        <span>L <strong>--</strong></span>
-        <span>C <strong>--</strong></span>
-      </div>
-      <div class="life-pulse-strip">
-        <span>PEAK <strong>--</strong></span>
-        <span>LOW <strong>--</strong></span>
-        <span>RANGE <strong>--</strong></span>
-      </div>
-    </div>
-    <div class="life-trading-layout">
-      <section class="life-chart-panel" aria-label="人生K线生成中">
+    <div class="life-market-shell life-scope-shell">
+      <section class="life-scope-header">
+        <div class="life-scope-ident">
+          <span>WEALTH SCOPE</span>
+          <strong>采样中</strong>
+          <small>ACQUIRING 100 YEARS</small>
+        </div>
+        <div class="life-scope-loading-wave" aria-hidden="true"><i></i></div>
+        <em>ACQUIRING</em>
+      </section>
+      <section class="life-scope-readouts">
+        <div class="life-scope-channel life-scope-channel-a">
+          <strong>CH A / 财富年线</strong>
+          <span class="life-skeleton-text"></span>
+        </div>
+        <div class="life-scope-channel life-scope-channel-b">
+          <strong>CH B / 八字命局</strong>
+          <span class="life-skeleton-text short"></span>
+        </div>
+        <div class="life-scope-cursor"><span>CURSOR / WAITING</span><strong>--</strong></div>
+      </section>
+      <section class="life-chart-panel life-chart-stage" aria-label="人生K线生成中">
         <div class="life-chart-toolbar">
-          <span>loading market series</span>
+          <strong>10 YEAR/DIV</strong>
+          <span>acquiring samples</span>
+          <em>WAITING</em>
           <button type="button" class="is-active">1Y</button>
           <button type="button">OHLC</button>
           <button type="button">Bazi</button>
@@ -691,11 +720,6 @@ function renderLifeWaiting() {
           <span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
       </section>
-      <aside class="life-side-panel">
-        <div><span>四柱</span><strong class="life-skeleton-text"></strong></div>
-        <div><span>大运</span><strong class="life-skeleton-text short"></strong></div>
-        <div><span>选中年份</span><strong>等待后端生成 OHLC</strong></div>
-      </aside>
     </div>`;
   yaoList.appendChild(item);
 }
@@ -741,61 +765,58 @@ function renderLifeKline(result) {
   const chartHigh = points.length ? Math.max(...points.map((point) => numericValue(point.high, point.score))) : 0;
   const chartLow = points.length ? Math.min(...points.map((point) => numericValue(point.low, point.score))) : 0;
   const chartRange = chartHigh - chartLow;
+  const averageClose = points.length
+    ? Math.round(points.reduce((sum, point) => sum + numericValue(point.close, point.score), 0) / points.length)
+    : 0;
   const totalDelta = points.length ? numericValue(last.close, last.score) - numericValue(first.open, first.score) : 0;
   const totalDeltaText = `${totalDelta > 0 ? "+" : ""}${totalDelta}`;
   const item = document.createElement("li");
   item.className = "life-kline-card";
   item.innerHTML = `
-    <div class="life-market-shell">
-      <section class="life-hero">
-        <div class="life-title-stack">
-          <span>LIFEKLINE / WEALTH MARKET</span>
-          <h2>${escapeHtml(birth.name || "人生K线")}</h2>
-          <p>${baziText}</p>
+    <div class="life-market-shell life-scope-shell">
+      <section class="life-scope-header">
+        <div class="life-scope-ident">
+          <span>WEALTH SCOPE</span>
+          <strong>${escapeHtml(birth.name || "人生K线")}</strong>
+          <small>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")}</small>
         </div>
-        <div class="life-hero-bazi">
-          <span>命局</span>
-          <strong>${escapeHtml(
-            dayMaster.strengthLevel
-              ? `${dayMaster.dayStem || ""}${dayMaster.dayElement || ""}${dayMaster.strengthLevel} · ${patternHeadline}`
-              : patternHeadline,
-          )}</strong>
-          <p>${escapeHtml(wealthHeadline)}</p>
+        <div class="life-scope-overview">${buildLifeScopeOverview(points)}</div>
+        <em>TRIGGERED</em>
+      </section>
+
+      <section class="life-scope-readouts">
+        <div class="life-scope-channel life-scope-channel-a">
+          <strong>CH A / 财富年线</strong>
+          <dl>
+            <div><dt>Period:</dt><dd>${escapeHtml(points.length)} years</dd></div>
+            <div><dt>Frequency:</dt><dd>1 year</dd></div>
+            <div><dt>Peak-peak:</dt><dd>${escapeHtml(chartRange)} pts</dd></div>
+            <div><dt>Mean:</dt><dd>${escapeHtml(averageClose)} pts</dd></div>
+          </dl>
         </div>
-        <div class="life-hero-ticker" aria-live="polite">
-          <span data-life-selected="year">${escapeHtml(first.year || "-")}</span>
-          <strong data-life-selected="close">${escapeHtml(first.close || "-")}</strong>
+        <div class="life-scope-channel life-scope-channel-b">
+          <strong>CH B / 八字命局</strong>
+          <dl>
+            <div><dt>Day master:</dt><dd>${escapeHtml(`${dayMaster.dayStem || "-"}${dayMaster.dayElement || ""}${dayMaster.strengthLevel || ""}`)}</dd></div>
+            <div><dt>Pattern:</dt><dd>${escapeHtml(patternProfile.patternName || "-")}</dd></div>
+            <div><dt>Wealth:</dt><dd>${escapeHtml(wealthProfile.wealthElement || "-")}</dd></div>
+            <div><dt>Pillars:</dt><dd>${baziText}</dd></div>
+          </dl>
+        </div>
+        <div class="life-scope-cursor" aria-live="polite">
+          <span>CURSOR / SELECTED</span>
+          <strong data-life-selected="year">${escapeHtml(first.year || "-")}</strong>
+          <p><b data-life-selected="ganZhi">${escapeHtml(first.ganZhi || "-")}</b> · <b data-life-selected="age">${escapeHtml(first.age ? `${first.age}岁` : "-")}</b></p>
           <em>Score <b data-life-selected="score">${escapeHtml(first.score || "-")}</b></em>
         </div>
       </section>
 
-      <div class="life-metric-grid">
-        <article>
-          <span>年度峰值</span>
-          <strong>${peak ? `${escapeHtml(peak.year)} · ${escapeHtml(peak.ganZhi)}` : "-"}</strong>
-          <p>${peak ? `${escapeHtml(peak.age)}岁 / score ${escapeHtml(peak.score)}` : "-"}</p>
-        </article>
-        <article>
-          <span>深度回撤</span>
-          <strong>${trough ? `${escapeHtml(trough.year)} · ${escapeHtml(trough.ganZhi)}` : "-"}</strong>
-          <p>${trough ? `${escapeHtml(trough.age)}岁 / low ${escapeHtml(trough.low)}` : "-"}</p>
-        </article>
-        <article>
-          <span>周期振幅</span>
-          <strong>${escapeHtml(chartRange)}</strong>
-          <p>High ${escapeHtml(chartHigh)} / Low ${escapeHtml(chartLow)}</p>
-        </article>
-        <article>
-          <span>百年收盘</span>
-          <strong>${escapeHtml(totalDeltaText)}</strong>
-          <p>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")}</p>
-        </article>
-      </div>
-
       <div class="life-main-grid">
         <section class="life-chart-panel life-chart-stage" aria-label="人生K线图表">
           <div class="life-chart-toolbar">
-            <span>${escapeHtml(first.year || "-")} - ${escapeHtml(last.year || "-")} · Wealth OHLC</span>
+            <strong>10 YEAR/DIV</strong>
+            <span>${escapeHtml(points.length)} samples at 1Y</span>
+            <em>TRIGGERED</em>
             <button type="button" class="is-active">1Y</button>
             <button type="button">1M</button>
             <button type="button">Bazi</button>
@@ -804,7 +825,7 @@ function renderLifeKline(result) {
           <div class="life-year-rail" aria-label="选择年份">${buildLifeYearRail(points)}</div>
         </section>
 
-        <aside class="life-side-panel life-command-panel">
+        <aside class="life-side-panel life-command-panel life-scope-detail-panel">
           <div class="life-selected-panel">
             <span>选中年份</span>
             <strong data-life-selected="delta">${first.year ? lifePointText(first) : "-"}</strong>
